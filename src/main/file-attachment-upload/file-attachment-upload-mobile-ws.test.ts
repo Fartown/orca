@@ -10,7 +10,7 @@ import {
   authenticateMobileWsSession,
   createEncryptedWsResponseReader,
   sendEncryptedWsRequest
-} from '../runtime/rpc/server/runtime-rpc-mobile-ws-test-harness'
+} from '../../fork-test-support/main/runtime/rpc/server/runtime-rpc-mobile-ws-test-harness'
 
 // A paired phone uploads over the real path: WebSocket, E2EE, mobile device scope, the mobile
 // allowlist, method dispatch, and the local temp-directory writer.

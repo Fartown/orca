@@ -12,11 +12,22 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { mobileWebAppRouteClosure } from './build/mobile-web-app/build-mobile-web-app-bundle.mjs'
 import { mobileWebAppDependenciesPresent } from './mobile-web-app/mobile-web-app-bundle-dependencies.mjs'
-import { PAGE_ROUTE_MODULES } from './mobile-web-app/mobile-web-app-page-route-modules.mjs'
+import {
+  collectMobileWebAppRouteKeys,
+  routePathnameFromKey
+} from './mobile-web-app/mobile-web-app-route-manifest.mjs'
 import { MOBILE_WEB_PAGE_ROUTES } from './build/mobile-web-app/mobile-web-page-routes.mjs'
 
 const mobileDir = fileURLToPath(new URL('../../mobile/', import.meta.url))
 const describeClosure = mobileWebAppDependenciesPresent() ? describe : describe.skip
+
+// Upstream dropped its hand-kept route-to-module map with the render tests; the builder's own walk names the same files.
+const declaredPathnames = new Set(MOBILE_WEB_PAGE_ROUTES.map((route) => route.pathname))
+const PAGE_ROUTE_MODULES = new Map(
+  (await collectMobileWebAppRouteKeys(join(mobileDir, 'app')))
+    .map((key) => [routePathnameFromKey(key), `app/${key.slice(2)}`])
+    .filter(([pathname]) => declaredPathnames.has(pathname))
+)
 
 const SESSION = '/h/[hostId]/session/[worktreeId]'
 const LOCAL_TASKS = '/h/[hostId]/local-tasks'

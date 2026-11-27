@@ -37,6 +37,7 @@ export abstract class DaemonPtySpawnResult extends DaemonPtySpawnRequest {
       this.resultForExitBeforeSpawnReply(sessionId, result, operation) ?? {
         ...withDeliveredStreamPosition(spawnResult, this.outputStreamPosition.position(sessionId)),
         ...(!result.isNew ? { isReattach: true } : {}),
+        ...(result.hostTerminalUsage ? { hostTerminalUsage: result.hostTerminalUsage } : {}),
         ...(result.isNew && !historyRecovery.identityChanged
           ? { startupCwdSource: effectiveCwd === opts.cwd ? 'request' : 'recovered-history' }
           : {})
@@ -282,10 +283,6 @@ export abstract class DaemonPtySpawnResult extends DaemonPtySpawnRequest {
     }
 
     const reattachSnapshot = await this.overlayDurableRestoreSnapshot(sessionId, result.snapshot)
-    const reattachProviderSequence =
-      typeof reattachSnapshot.outputSequence === 'number'
-        ? { value: reattachSnapshot.outputSequence, generation: 'continued' as const }
-        : providerSequence
     const isAltScreen = reattachSnapshot.modes.alternateScreen
     const snapshotPrefix = reattachSnapshot.scrollbackAnsi + reattachSnapshot.rehydrateSequences
     const snapshotFrame = reattachSnapshot.snapshotAnsi
@@ -309,7 +306,8 @@ export abstract class DaemonPtySpawnResult extends DaemonPtySpawnRequest {
             snapshotFrameRestoreAnsi: reattachSnapshot.frameRestoreAnsi
           }
         : {}),
-      ...(reattachProviderSequence ? { providerSequence: reattachProviderSequence } : {}),
+      // Overlay-window bytes also arrive live; the overlay's later sequence would count them twice.
+      ...(providerSequence ? { providerSequence } : {}),
       ...(kittyKeyboardFlags !== undefined
         ? { snapshotKittyKeyboardFlags: kittyKeyboardFlags }
         : {}),

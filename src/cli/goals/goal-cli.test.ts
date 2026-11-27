@@ -19,7 +19,8 @@ const {
 }))
 
 vi.mock('../runtime/client', async () => {
-  const { createRuntimeClientModuleMock } = await import('../index-test-harness.js')
+  const { createRuntimeClientModuleMock } =
+    await import('../../fork-test-support/cli/index-test-harness.js')
   return createRuntimeClientModuleMock({
     callMock,
     runtimeClientConstructorMock,
@@ -49,13 +50,14 @@ vi.mock('../../shared/remote-runtime/host-store/runtime-environment-store', () =
 }))
 
 vi.mock('child_process', async () => {
-  const { createChildProcessModuleMock } = await import('../index-test-harness.js')
+  const { createChildProcessModuleMock } =
+    await import('../../fork-test-support/cli/index-test-harness.js')
   return createChildProcessModuleMock(spawnMock)
 })
 
 import { main } from '../index'
-import { useWorktreeAwarenessEnvironment } from '../index-test-harness'
-import { okFixture } from '../runtime/fixtures/runtime-rpc-fixtures'
+import { useWorktreeAwarenessEnvironment } from '../../fork-test-support/cli/index-test-harness'
+import { okFixture } from '../../fork-test-support/cli/runtime/fixtures/runtime-rpc-fixtures'
 
 const DRAFT_ID = '3f2a0c4e-1b2d-4c3e-8f90-123456789abc'
 const GOAL_ID = '7d2b7bef-d22b-4252-9b32-7af3de1676be'

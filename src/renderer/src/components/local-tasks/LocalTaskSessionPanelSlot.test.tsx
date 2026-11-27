@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { makeTerminalTab } from '@/store/terminals/testing/terminal-row.test-fixture'
+import { makeTerminalTab } from '../../../../fork-test-support/renderer/src/store/terminals/testing/terminal-row.test-fixture'
 import { makeWorktree } from '@/store/slices/worktrees/worktree.test-fixture'
 import type { LocalTaskSessionLink } from '../../../../shared/local-tasks/local-task-link-types'
 import type { LocalTask } from '../../../../shared/local-tasks/local-task-types'

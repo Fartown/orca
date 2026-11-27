@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createPageClient } from '../mobile-web-shell/bridge/test-support/bridge-page-client-test-harness'
+import { createPageClient } from '../fork-test-support/mobile-web-shell/bridge/test-support/bridge-page-client-test-harness'
 import { pageReadsStorageKey } from '../mobile-web-shell/page-storage/page-storage-keys'
 
 describe('the local tasks view preference on a served page', () => {

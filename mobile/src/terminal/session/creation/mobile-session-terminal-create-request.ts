@@ -23,6 +23,7 @@ export function requestMobileSessionTerminalCreate(args: {
   options?: MobileQuickCommandLaunch['options'] & { cwd?: string }
   shell?: string
   sourceChatFork?: { sessionId: string }
+  viewMode?: 'chat'
 }) {
   const {
     client,
@@ -32,7 +33,8 @@ export function requestMobileSessionTerminalCreate(args: {
     agent,
     options,
     shell,
-    sourceChatFork
+    sourceChatFork,
+    viewMode
   } = args
   const params = {
     worktree: `id:${worktreeId}`,
@@ -47,6 +49,7 @@ export function requestMobileSessionTerminalCreate(args: {
     ...(shell ? { shell } : {}),
     ...(options?.cwd ? { cwd: options.cwd } : {}),
     ...(sourceChatFork ? { sourceChatFork } : {}),
+    ...(viewMode ? { viewMode } : {}),
     activate: false,
     select: true,
     navigation: 'caller' as const

@@ -14,9 +14,9 @@ export type MobileTerminalContinuationCreateOptions = {
   /** Reuse an idempotency key across retries of the same logical create, so a retry after an
    *  ambiguous failure resolves to the in-flight terminal instead of spawning a sibling. */
   clientMutationId?: string
-  /** Hears what the create settled as; setting it also keeps the create off `agent.launch`,
-   *  whose reply names no terminal. */
-  onCreateResult?: (result: Exclude<MobileTerminalCreateResult, null>) => void
+  /** Hears the created tab's terminal handle, which is not a string when the reply carried none;
+   *  setting it also keeps the create off `agent.launch`, whose reply names no terminal. */
+  onCreateResult?: (terminalHandle: unknown) => void
 }
 
 type CreateTerminal<Agent> = (
@@ -33,8 +33,11 @@ export async function createMobileTerminalWithResult<Agent>(
   let result: MobileTerminalCreateResult = null
   await createTerminal(agent, {
     ...options,
-    onCreateResult: (settled) => {
-      result = settled
+    onCreateResult: (terminalHandle) => {
+      result =
+        typeof terminalHandle === 'string'
+          ? { kind: 'terminal', handle: terminalHandle }
+          : { kind: 'terminal-without-handle' }
     }
   })
   return result

@@ -5,7 +5,6 @@ import { senderDispatchLaunch, senderDispatchLaunchReader } from './sender-dispa
 import type { AgentMessageSender } from '../../../../../shared/agent-session/journal/agent-session-message-source'
 import type { ConversationNameTab } from '../../../../../shared/agent-status/presentation/agent-row-conversation-name'
 import type { AgentType } from '../../../../../shared/agent-status/contracts/agent-status-types'
-import type { AiVaultSessionTitle } from '../../../../../shared/ai-vault/contracts/ai-vault-session-title'
 import {
   indexCrewSenderStatusRows,
   resolveHostAgentRowConversationName,
@@ -41,6 +40,9 @@ import {
 import { terminalHostConnectionMatches } from '../../workers/transcripts/worker-provider-session'
 import type { RuntimeWorktreeAgentSource } from '../../../workspaces/process-listing/runtime-worktree-agent-source'
 import type { CrewNamingAssignment } from '../../crew/crew-read-dependencies'
+import { savedChatTabFinder } from '../../../session-tabs/chat/structured-conversation-tab-namer'
+
+type SavedChatTab = NonNullable<MirroredTabs['unifiedTabs']>[string][number]
 
 type RuntimeSenderNameDeps = {
   getDb: () => OrchestrationDb | null
@@ -150,10 +152,7 @@ export class RuntimeOrchestrationSenderNames {
 
   /** Names one worktree.ps pass's rows as desktop's compact row does; null keeps the phone's message fallback. */
   agentRowNamer(
-    resolvedSessionTitles: ReadonlyMap<
-      string,
-      AiVaultSessionTitle
-    > = getCachedHostProviderTitleMap(),
+    resolvedSessionTitles = getCachedHostProviderTitleMap(),
     namingOptions: { mintIdentityFallback?: boolean } = {}
   ): (source: AgentRowNamingSource) => string | null {
     // A pass reads the setting and each worktree's session at most once, however many rows it lists.
@@ -169,12 +168,7 @@ export class RuntimeOrchestrationSenderNames {
     return (source) => {
       generatedTitlesEnabled ??= readGeneratedTitlesEnabled(this.deps.getStore())
       return resolveHostAgentRowConversationName({
-        tabId: source.tabId,
-        worktreeId: source.worktreeId,
-        paneKey: source.paneKey,
-        ptyId: source.ptyId,
-        agentType: source.agentType,
-        providerSessionId: source.providerSessionId,
+        ...source,
         baseOptions: { providerSessionId: source.providerSessionId },
         generatedTitlesEnabled,
         mintIdentityFallback: namingOptions.mintIdentityFallback,
@@ -238,13 +232,18 @@ export class RuntimeOrchestrationSenderNames {
     session: SessionLookup = this.deps.getWorkspaceSession,
     records: AgentSessionRecordReader | null = readAgentSessionRecordStore()
   ): Pick<SenderNamingSources, 'records' | 'chatTab' | 'store'> {
+    const finders = new Map<string, ReturnType<typeof savedChatTabFinder<SavedChatTab>>>()
     return {
       records,
       store: this.deps.getStore(),
-      chatTab: (worktreeId, sessionId) =>
-        session(worktreeId)?.unifiedTabs?.[worktreeId]?.find(
-          (tab) => tab.contentType === 'agent-session' && tab.entityId === sessionId
-        ) ?? null
+      chatTab: (worktreeId, sessionId) => {
+        let find = finders.get(worktreeId)
+        if (!find) {
+          find = savedChatTabFinder(() => session(worktreeId)?.unifiedTabs?.[worktreeId])
+          finders.set(worktreeId, find)
+        }
+        return find(sessionId) ?? null
+      }
     }
   }
 

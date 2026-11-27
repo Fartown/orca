@@ -8,6 +8,7 @@ import { agentProviderSessionsEqual } from '../../../../../shared/agent-session/
 import { sessionNameHistoryEqual } from '../../../../../shared/session-names/session-name-history'
 import { mainAgentStatusEqual } from '../../../../../shared/agent-status/lifecycle/main-agent-status'
 import { programStatusFacetsEqual } from '../../../../../shared/program-status/facet'
+import { orchestrationContextsEqual } from '@/store/slices/agent-status/orchestration/agent-status-orchestration-context'
 import type {
   WebSessionTabsBatchContext,
   WebSessionTabsBatchRecordKey,
@@ -73,6 +74,12 @@ export function agentStatusEntryEqual(
     programStatusFacetsEqual(a.programStatus, b.programStatus) &&
     agentProviderSessionsEqual(a.agentType, a.providerSession, b.providerSession) &&
     a.orcaSessionId === b.orcaSessionId &&
+    // Paired clients nest workers by these alone; a lineage-only frame must still land.
+    a.terminalHandle === b.terminalHandle &&
+    (a.orchestration === b.orchestration ||
+      (a.orchestration !== undefined &&
+        b.orchestration !== undefined &&
+        orchestrationContextsEqual(a.orchestration, b.orchestration))) &&
     sameAgentStateHistory(a.stateHistory, b.stateHistory)
   )
 }

@@ -7,8 +7,8 @@ import { mainProcessState as state } from './main-process-state'
 let unregister: (() => void) | null = null
 
 /** Composed after the local PTY startup, torn down on quit. */
-export async function startGoalFeatureForMainProcess(): Promise<void> {
-  const runtime = state.runtime
+export function startGoalFeatureForMainProcess(): void {
+  const runtime = state.core.runtime
   const store = state.store
   if (!runtime || !store) {
     throw new Error('Goal feature dependencies must be initialized before runtime launch')
@@ -31,7 +31,8 @@ export async function startGoalFeatureForMainProcess(): Promise<void> {
     }
   })
   if (state.serveOptions) {
-    await ready
+    // Serve awaits this before binding RPC, so a client never reaches a host without goals.
+    state.localPtyStartupReady = ready
   } else {
     void ready
   }

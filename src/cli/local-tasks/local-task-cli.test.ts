@@ -19,7 +19,8 @@ const {
 }))
 
 vi.mock('../runtime/client', async () => {
-  const { createRuntimeClientModuleMock } = await import('../index-test-harness.js')
+  const { createRuntimeClientModuleMock } =
+    await import('../../fork-test-support/cli/index-test-harness.js')
   return createRuntimeClientModuleMock({
     callMock,
     runtimeClientConstructorMock,
@@ -49,14 +50,18 @@ vi.mock('../../shared/remote-runtime/host-store/runtime-environment-store', () =
 }))
 
 vi.mock('child_process', async () => {
-  const { createChildProcessModuleMock } = await import('../index-test-harness.js')
+  const { createChildProcessModuleMock } =
+    await import('../../fork-test-support/cli/index-test-harness.js')
   return createChildProcessModuleMock(spawnMock)
 })
 
 import { main } from '../index'
-import { useWorktreeAwarenessEnvironment } from '../index-test-harness'
+import { useWorktreeAwarenessEnvironment } from '../../fork-test-support/cli/index-test-harness'
 import { RuntimeClientError } from '../runtime/connection/types'
-import { buildWorktree, okFixture } from '../runtime/fixtures/runtime-rpc-fixtures'
+import {
+  buildWorktree,
+  okFixture
+} from '../../fork-test-support/cli/runtime/fixtures/runtime-rpc-fixtures'
 
 const statuses = [
   {

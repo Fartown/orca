@@ -11,10 +11,7 @@ import {
 } from '@/store/terminals/pty/terminal-tab-recovery-ledger'
 
 import type { TerminalPaneRecoveryReason } from '../../../../../../shared/workspace-layout/terminal-tab-types'
-import {
-  _resetTerminalInputQuarantineForTests,
-  armTerminalInputQuarantine
-} from '../../input/terminal-input-quarantine'
+import { armTerminalInputQuarantine } from '../../input/terminal-input-quarantine'
 import { notifyTerminalInputNotSent } from '../../input/terminal-input-not-sent-notice'
 import {
   allowsTerminalChatRecovery,
@@ -304,14 +301,4 @@ export function settleTerminalPaneRecovery(
     return
   }
   useAppStore.getState().settleTerminalTabRecovery?.(tabId, generation, outcome)
-}
-
-export function _resetTerminalPaneRecoveryForTests(): void {
-  activeTerminalRecoveryInstances.clear()
-  nextTerminalRecoveryInstanceId = 0
-  for (const pendingRetry of pendingRetryByTabId.values()) {
-    clearTimeout(pendingRetry.timer)
-  }
-  pendingRetryByTabId.clear()
-  _resetTerminalInputQuarantineForTests()
 }

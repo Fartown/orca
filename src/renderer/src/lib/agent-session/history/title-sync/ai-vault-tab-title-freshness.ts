@@ -3,9 +3,11 @@ import { lastVerifiedRuntimeStatus } from '../../../../../../shared/remote-runti
 import { getDecorativeAgentTitleSignature } from '../../../../../../shared/agent-status/title/agent-decorative-title-signature'
 import { makePaneKey } from '../../../../../../shared/workspace-layout/stable-pane-id'
 import { findRegisteredTerminalTab } from '@/runtime/hosted-terminals/mounted-surfaces/mounted-terminal-tab-registry'
+import { isKnownHarnessInjectedUserTurnText } from '../../../../../../shared/agent-session/journal/harness-injected-user-turns'
 import { isAiVaultTitleAgent } from '../../../../../../shared/ai-vault/contracts/ai-vault-session-title'
 import type { AppState } from '@/store/types'
 import type { RuntimeStatuses } from '@/store/slices/runtime-status/views/runtime-status-owner'
+import { readRecordChanges } from '@/store/record-transitions/keyed-record-change-reads'
 import type { TerminalTab } from '../../../../../../shared/workspace-layout/terminal-tab-types'
 import type { AiVaultTitleRequest } from './ai-vault-tab-title-requests'
 import { collectAgentPaneConversations } from '../../identity/pane-agent-conversations'
@@ -60,6 +62,11 @@ export function changedTitleRefreshHosts(
 
 type StoredTitle = TerminalTab['aiVaultTitle']
 
+/** Older hosts name Claude sessions with harness markup such as /clear's command caveat. */
+export function isClaudeHarnessTitle(title: { agent: string; title: string }): boolean {
+  return title.agent === 'claude' && isKnownHarnessInjectedUserTurnText(title.title)
+}
+
 function storedTitleKey(worktreeId: string, tabId: string): string {
   return `${worktreeId}\0${tabId}`
 }
@@ -100,6 +107,24 @@ function titleKey(title: string): string {
   return getDecorativeAgentTitleSignature(folded) ?? folded
 }
 
+function changedPaneTitleTabIds(state: AppState, previous: AppState): Iterable<string> {
+  const current = state.runtimePaneTitlesByTabId ?? {}
+  const prior = previous.runtimePaneTitlesByTabId ?? {}
+  const changes = readRecordChanges(current, prior)
+  if (!changes) {
+    return []
+  }
+  if (changes.kind === 'addressed') {
+    return changes.keys
+  }
+  return new Set(
+    [...Object.keys(current), ...Object.keys(prior)].filter(
+      (tabId) => current[tabId] !== prior[tabId]
+    )
+  )
+}
+
+/** Requests of every retitled pane, background split panes included; only the retitled tabs are read. */
 export function changedPaneTitleRequests(
   state: AppState,
   previous: AppState,
@@ -108,11 +133,8 @@ export function changedPaneTitleRequests(
   const currentTitles = state.runtimePaneTitlesByTabId ?? {}
   const previousTitles = previous.runtimePaneTitlesByTabId ?? {}
   const changed: AiVaultTitleRequest[] = []
-  for (const tabId of new Set([...Object.keys(currentTitles), ...Object.keys(previousTitles)])) {
+  for (const tabId of changedPaneTitleTabIds(state, previous)) {
     const titles = currentTitles[tabId]
-    if (titles === previousTitles[tabId]) {
-      continue
-    }
     const prior = previousTitles[tabId]
     for (const rawId of new Set([...Object.keys(titles ?? {}), ...Object.keys(prior ?? {})])) {
       const id = Number(rawId)

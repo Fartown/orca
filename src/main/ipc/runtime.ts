@@ -97,6 +97,9 @@ export function registerRuntimeHandlers(runtime: OrcaRuntimeService): void {
     return runtime.getStatus()
   })
 
+  // Registry build walks every method; do it once, not per IPC call.
+  const dispatcher = new RpcDispatcher({ runtime, methods: ALL_RPC_METHODS })
+
   ipcMain.handle(
     'runtime:call',
     async (
@@ -111,7 +114,7 @@ export function registerRuntimeHandlers(runtime: OrcaRuntimeService): void {
         throw new Error('Runtime RPC call must originate from the current main frame')
       }
       const callScope = desktopSenders.callScopeFor(event.sender)
-      return new RpcDispatcher({ runtime, methods: ALL_RPC_METHODS }).dispatch(
+      return dispatcher.dispatch(
         {
           id: 'desktop-ipc',
           authToken: 'desktop-ipc',
@@ -163,7 +166,7 @@ export function registerRuntimeHandlers(runtime: OrcaRuntimeService): void {
       senderSubscriptions.set(args.subscriptionId, controller)
       const channel = `runtime:subscription:${args.subscriptionId}`
       // Streaming outlives dispatch setup; unsubscribe or sender retirement owns cancellation.
-      void new RpcDispatcher({ runtime, methods: ALL_RPC_METHODS }).dispatchStreamingObjects(
+      void dispatcher.dispatchStreamingObjects(
         {
           id: args.subscriptionId,
           authToken: 'desktop-ipc',

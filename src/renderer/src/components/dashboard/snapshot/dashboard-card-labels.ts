@@ -56,7 +56,8 @@ export function rowConversationName(
   const paneLiveTitle = resolveAgentRowPaneLiveTitle(
     layout,
     paneTitles,
-    parsePaneKey(row.paneKey)?.leafId
+    parsePaneKey(row.paneKey)?.leafId,
+    row.runtimePaneId
   )
   const { aiVaultTitle, userTitle, identityFallbackTitle } = resolveDashboardCardSessionSlot(row)
   return (

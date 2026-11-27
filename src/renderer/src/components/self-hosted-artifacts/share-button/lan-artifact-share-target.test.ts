@@ -131,24 +131,4 @@ describe('document preview grant owner', () => {
       }
     })
   })
-  it('keeps a legacy SSH grant remote so an unsupported host never reads a local same-path file', () => {
-    expect(
-      resolveDocPreviewShareTarget(
-        {
-          owner: { kind: 'ssh', connectionId: 'old-host' },
-          requestBase: '/srv/repo',
-          root: '/srv/repo',
-          entryRelativePath: 'report.html'
-        },
-        '/srv/repo/report.html'
-      )
-    ).toEqual({
-      ok: true,
-      target: {
-        executionHostId: 'ssh:old-host',
-        workspaceRoot: '/srv/repo',
-        sourcePath: '/srv/repo/report.html'
-      }
-    })
-  })
 })

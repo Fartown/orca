@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { projectActivityTabs } from '../components/activity/events/activity-tab-projection'
+import { advanceActivityTabs } from '../components/activity/events/activity-tab-projection'
 import { buildActivityTabContext } from '../components/activity/events/activity-event-builder-context'
 import { getActivitySessionName } from './activity-session-name'
 import type { Tab } from '../../../shared/workspace-layout/tab-groups/tab-types'
@@ -37,7 +37,7 @@ const entry: AgentStatusEntry = {
 }
 
 it('agent-session projection preserves native, generated and container candidates separately', () => {
-  const projected = projectActivityTabs({ folder: [tab] }, null)
+  const projected = advanceActivityTabs({ folder: [tab] }, null, null)
   const context = buildActivityTabContext({}, projected, new Map()).get(tab.id)!
   expect(context.tab).toMatchObject({
     title: 'Codex',
@@ -62,17 +62,19 @@ it('an evidence-only rename invalidates projection while a focus-only update ret
   }
   // Only terminal tabs are reused across focus-only writes; native chats keep their current objects.
   const terminal: Tab = { ...tab, contentType: 'terminal' }
-  const previous = projectActivityTabs({ folder: [terminal] }, null)
-  const focusOnly = projectActivityTabs({ folder: [{ ...terminal, lastFocusedAt: 100 }] }, previous)
+  const previous = advanceActivityTabs({ folder: [terminal] }, null, null)
+  const focusOnly = advanceActivityTabs({ folder: [{ ...terminal, lastFocusedAt: 100 }] }, null, previous)
   expect(focusOnly).toBe(previous)
-  const renamedTerminal = projectActivityTabs(
+  const renamedTerminal = advanceActivityTabs(
     { folder: [{ ...terminal, aiVaultTitle: renamedSlot }] },
+    null,
     previous
   )
   expect(renamedTerminal).not.toBe(previous)
-  const rename = projectActivityTabs(
+  const rename = advanceActivityTabs(
     { folder: [{ ...tab, aiVaultTitle: renamedSlot }] },
-    projectActivityTabs({ folder: [tab] }, null)
+    null,
+    advanceActivityTabs({ folder: [tab] }, null, null)
   )
   expect(
     getActivitySessionName(

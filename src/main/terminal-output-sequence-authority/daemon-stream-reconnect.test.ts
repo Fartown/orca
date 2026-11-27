@@ -8,9 +8,9 @@ import {
   createMockSubprocess,
   startDaemonAdapterHarness,
   waitFor
-} from '../daemon/providers/adapter/testing/daemon-pty-adapter-test-harness'
-import { createSideEffectRuntime } from '../runtime/construction/test-context/orca-runtime-test-scenario-builders.spec'
-import { syncSinglePty } from '../runtime/construction/test-context/orca-runtime-test-fixtures.spec'
+} from '../../fork-test-support/main/daemon/providers/adapter/testing/daemon-pty-adapter-test-harness'
+import { createSideEffectRuntime } from '../../fork-test-support/main/runtime/construction/test-context/orca-runtime-test-scenario-builders.spec'
+import { syncSinglePty } from '../../fork-test-support/main/runtime/construction/test-context/orca-runtime-test-fixtures.spec'
 
 it('keeps legacy daemon snapshots and new echo in one domain through real reconnect sockets', async () => {
   const subprocess = createMockSubprocess()

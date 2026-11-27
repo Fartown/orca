@@ -153,7 +153,10 @@ export function useMobileSessionController(override?: MobileSessionScopeOverride
     presentation,
     useMobileSessionPanelRouteActions(presentation)
   )
-  const bot = Object.assign(panelRouteActions, useMobileSessionBot(panelRouteActions))
+  const bot = Object.assign(
+    panelRouteActions,
+    useMobileSessionBot(panelRouteActions, itemLink.access)
+  )
   // The one owner of opening an existing chat, so a fork's source link follows its selection rules.
   const terminalHostSettings = useTerminalHostSettings(bot.client, bot.connState)
   return Object.assign(bot, preferences, { openNativeSession, terminalHostSettings })

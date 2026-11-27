@@ -244,13 +244,8 @@ it('an inactive split pane requests its own SID and never borrows the selected p
 })
 
 it('a retained row without a live tab still reads its own name', async () => {
-  useAppStore.setState((s) => ({
-    tabsByWorktree: {},
-    // Upstream #42104 retired finished-agent retention; a done row now outlives its tab in place.
-    agentStatusByPaneKey: acceptedAgentStatuses([
-      [PANE_KEY, { ...s.agentStatusByPaneKey.get(PANE_KEY)!, state: 'done' }]
-    ])
-  }))
+  // Upstream #45835 lists a tabless pane only while workspace cards do: a live one stays, a finished local one drops.
+  useAppStore.setState({ tabsByWorktree: {} })
   const { result } = mountThreads()
   await waitFor(() => expect(result.current.allThreads[0]?.paneTitle).toBe(nativeName))
 })

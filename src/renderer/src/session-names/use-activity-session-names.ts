@@ -147,7 +147,7 @@ export function useActivitySessionNames(
       // A native chat tab holds exactly one session, so its label names that session.
       const ownsContainer = isChatTab || (ownsSession && isSinglePaneContainer)
       const paneLiveTitle = ownsSession
-        ? resolveAgentRowPaneLiveTitle(layout, state.paneTitles[tab.id], pane?.leafId)
+        ? resolveAgentRowPaneLiveTitle(layout, state.paneTitles[tab.id], pane?.leafId, undefined)
         : null
       // A native chat's projected customTitle is its host-saved name, the one its tab shows.
       const chatSavedName = isChatTab ? tab.customTitle : null

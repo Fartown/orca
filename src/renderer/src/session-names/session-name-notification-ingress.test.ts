@@ -2,7 +2,7 @@ import { expect, it, vi } from 'vitest'
 import {
   buildStoreState,
   FUTURE_PANE_KEY
-} from '../hooks/ipc-events/agent-status/ipc-events-agent-status-store-test-fixtures'
+} from '../../../fork-test-support/renderer/src/hooks/ipc-events/agent-status/ipc-events-agent-status-store-test-fixtures'
 import { createAgentStatusEventApplicator } from '../hooks/ipc-events/agent-status/agent-status-event-applicator'
 
 const { observe, getState } = vi.hoisted(() => ({ observe: vi.fn(), getState: vi.fn() }))

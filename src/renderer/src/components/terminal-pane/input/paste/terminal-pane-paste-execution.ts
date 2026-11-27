@@ -21,6 +21,10 @@ import type { ReadClipboardTextOptions } from '../../../../../../shared/clipboar
 import type { TerminalPaneCloseController } from '../../layout/close/use-terminal-pane-close-actions'
 import { resolveProtectedMultilinePasteOptionsForPane } from './terminal-agent-paste-bracketing'
 import { resolveTerminalInputHostPlatform } from '../terminal-input-host-platform'
+import {
+  reportUnpastedClipboardEventFiles,
+  requestNativePasteForUnreadWindowsClipboard
+} from './terminal-unread-clipboard-native-paste'
 
 export type TerminalPanePasteExecution = ReturnType<typeof createTerminalPanePasteExecution>
 
@@ -143,8 +147,17 @@ export function createTerminalPanePasteExecution(
   const pasteFromClipboard = (
     pane: ManagedPane,
     source: Extract<TerminalPasteSource, 'keyboard' | 'paste-event' | 'app-menu'>,
-    readClipboardText: (options?: ReadClipboardTextOptions) => Promise<string> = window.api.ui
-      .readClipboardText
+    {
+      readClipboardText = window.api.ui.readClipboardText,
+      eventCopiedFilePaths,
+      eventCarriedFiles = false,
+      isUnreadWindowsClipboardFallback = false
+    }: {
+      readClipboardText?: (options?: ReadClipboardTextOptions) => Promise<string>
+      eventCopiedFilePaths?: string[]
+      eventCarriedFiles?: boolean
+      isUnreadWindowsClipboardFallback?: boolean
+    } = {}
   ): void => {
     const connectionId = getConnectionId(worktreeId) ?? null
     const runtimeEnvironmentId = resolveTerminalPasteRuntimeEnvironmentId(
@@ -157,6 +170,7 @@ export function createTerminalPanePasteExecution(
       readClipboardText,
       saveClipboardImageAsTempFile: window.api.ui.saveClipboardImageAsTempFile,
       copiedFiles: createPaneClipboardCopiedFiles(pane),
+      eventCopiedFilePaths,
       connectionId,
       runtimeEnvironmentId,
       onLocalImagePasted: (path) => recordRecentTerminalImage(pane.terminal, path, true),
@@ -167,9 +181,22 @@ export function createTerminalPanePasteExecution(
           'Paste failed: clipboard text is too large for a safe terminal paste.'
         ),
       onImagePasteError: (error) => ownership.feedback.fail(formatClipboardImagePasteError(error))
-    }).catch(() => {
-      ownership.feedback.fail('Paste failed.')
     })
+      .then((result) => {
+        // The paste event this may trigger must not fall back again.
+        if (source !== 'paste-event') {
+          requestNativePasteForUnreadWindowsClipboard(result, pane)
+        } else if (
+          isUnreadWindowsClipboardFallback ||
+          !eventCarriedFiles ||
+          !requestNativePasteForUnreadWindowsClipboard(result, pane)
+        ) {
+          reportUnpastedClipboardEventFiles(result, eventCarriedFiles)
+        }
+      })
+      .catch(() => {
+        ownership.feedback.fail('Paste failed.')
+      })
   }
 
   return {

@@ -28,13 +28,13 @@ import {
   launchManagedWorkspace,
   relaunchManagedApp,
   type ManagedHostFixture
-} from './remote/managed-ssh/host-lifecycle/orcad-managed-workspace'
+} from './fork-fixtures/remote/managed-ssh/host-lifecycle/orcad-managed-workspace'
 import {
   callEnvironment,
   createPairedHostTerminal,
   openPairedClientTab,
   readPairedPaneContent
-} from './terminal/remote-hosts/paired-host-terminal'
+} from './fork-fixtures/terminal/remote-hosts/paired-host-terminal'
 import { toRuntimeExecutionHostId } from '../../src/shared/execution-host/execution-host'
 import type { PairedMobileSocket } from './remote/mobile-mirror/paired-mobile-client'
 

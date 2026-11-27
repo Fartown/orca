@@ -99,7 +99,7 @@
       ],
       "tests": ["src/renderer/src/terminal-shell-mode-recovery/host-shell-return.test.ts"],
       "checks": [
-        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/main/terminal-shell-mode-recovery src/shared/terminal-shell-mode-recovery src/renderer/src/terminal-shell-mode-recovery src/renderer/src/components/terminal-pane/pty-connection/tests/pty-connection-foreground-agent.test.ts src/renderer/src/components/terminal-pane/pane-foreground-agent-contact.test.ts src/renderer/src/runtime/runtime-terminal-inspection-contact.test.ts --maxWorkers=2"
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/main/terminal-shell-mode-recovery src/shared/terminal-shell-mode-recovery src/renderer/src/terminal-shell-mode-recovery src/renderer/src/components/terminal-pane/pane-foreground-agent-contact.test.ts src/renderer/src/runtime/runtime-terminal-inspection-contact.test.ts --maxWorkers=2"
       ]
     },
     {
@@ -118,11 +118,11 @@
         "src/main/terminal-output-sequence-authority/delivered-stream-spawn-result.ts"
       ],
       "dependsOn": [
-        "src/main/daemon/providers/adapter/testing/daemon-pty-adapter-test-harness.ts",
+        "src/fork-test-support/main/daemon/providers/adapter/testing/daemon-pty-adapter-test-harness.ts",
         "src/main/daemon/providers/adapter/daemon-pty-adapter.ts",
         "src/main/daemon/pty-subprocess/testing/mock-descendant-sweep.ts",
-        "src/main/runtime/construction/test-context/orca-runtime-test-scenario-builders.spec.ts",
-        "src/main/runtime/construction/test-context/orca-runtime-test-fixtures.spec.ts",
+        "src/fork-test-support/main/runtime/construction/test-context/orca-runtime-test-scenario-builders.spec.ts",
+        "src/fork-test-support/main/runtime/construction/test-context/orca-runtime-test-fixtures.spec.ts",
         "src/main/daemon/launch/daemon-spawner.ts",
         "src/main/daemon/protocol/daemon-stream-events.ts",
         "src/main/providers/pty/spawn-result.ts"
@@ -164,29 +164,14 @@
           "why": "Keep execution-owner snapshot and delivered stream positions consistent across attach."
         },
         {
-          "file": "src/main/daemon/providers/adapter/testing/daemon-pty-adapter-session-adoption.test.ts",
-          "mustContain": "streamPosition",
-          "why": "Update existing adapter fixtures for delivered stream metadata."
-        },
-        {
           "file": "src/main/daemon/transport/client/daemon-client.ts",
-          "mustContain": "this.clientId = randomUUID()",
+          "mustContain": "clientId: randomUUID()",
           "why": "Fence each reconnected stream from previous attachment callbacks on older daemons."
         },
         {
           "file": "src/main/daemon/providers/checkpointing/daemon-pty-buffer-snapshots.ts",
           "mustContain": "canProvideAuthoritativeBufferSnapshot",
           "why": "Keep the existing snapshot ownership probe in its snapshot module and the state seam within its line budget."
-        },
-        {
-          "file": "src/renderer/src/components/terminal-pane/pty-connection/test-fixtures/pty-connection-mocks.spec.ts",
-          "mustContain": "trackTerminalTestBinding(binding)",
-          "why": "Release test connection bindings so live process monitors cannot contaminate later SSH regression assertions."
-        },
-        {
-          "file": "src/renderer/src/components/terminal-pane/pty-connection/test-fixtures/pty-connection-test-environment.ts",
-          "mustContain": "disposeTerminalTestBindings()",
-          "why": "Dispose test connections before replacing renderer globals during regression teardown."
         },
         {
           "file": "src/renderer/src/components/terminal-pane/pty-connection/test-fixtures/pty-connection-test-pane-fixtures.ts",
@@ -239,12 +224,7 @@
       ],
       "seams": [
         {
-          "file": "src/renderer/src/components/terminal-pane/input/paste/terminal-pane-paste-listeners.test.ts",
-          "mustContain": "pasteErrorsFor(setTerminalErrorsByPaneId",
-          "why": "Upstream's app-menu paste cases read the fork's per-pane paste errors, so a lost target still asserts its error and no recorded image"
-        },
-        {
-          "file": "src/renderer/src/components/native-chat/paste/native-chat-paste-routing.test.tsx",
+          "file": "src/renderer/src/terminal-paste-ownership/terminal-only-paste-delegation.test.ts",
           "mustContain": "'app-menu'",
           "why": "Keep terminal-only menu paste delegated to the original-target clipboard execution."
         },
@@ -289,7 +269,7 @@
         "src/renderer/src/terminal-paste-ownership/terminal-paste-feedback.test.ts"
       ],
       "checks": [
-        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/terminal-paste-ownership src/renderer/src/components/terminal-pane/clipboard/terminal-clipboard-paste.test.ts src/renderer/src/components/terminal-pane/input/paste/terminal-paste-coordinator.test.ts src/renderer/src/components/native-chat/paste/native-chat-paste-routing.test.tsx --maxWorkers=2"
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/terminal-paste-ownership src/renderer/src/terminal-paste-ownership/terminal-only-paste-delegation.test.ts --maxWorkers=2"
       ]
     },
     {
@@ -419,12 +399,7 @@
           "why": "Activate independent folder workspaces on their owner without requiring a repo row."
         },
         {
-          "file": "src/renderer/src/hooks/ipc-events/workspace-catalog/worktree-event-runtime-activation.test.ts",
-          "mustContain": "activateAndRevealWorkspace",
-          "why": "Activate independent folder workspaces on their owner without requiring a repo row."
-        },
-        {
-          "file": "src/renderer/src/hooks/ipc-events/workspace-catalog/worktree-event-lineage-refresh.test.ts",
+          "file": "src/renderer/src/mobile-terminal-surface-recovery/notified-workspace-activation.test.ts",
           "mustContain": "activateAndRevealWorkspace",
           "why": "Activate independent folder workspaces on their owner without requiring a repo row."
         },
@@ -462,8 +437,7 @@
       "tests": [
         "src/main/mobile-terminal-surface-recovery/adopted-terminal-create.test.ts",
         "src/renderer/src/mobile-terminal-surface-recovery/adopted-terminal-attach.test.ts",
-        "src/renderer/src/hooks/ipc-events/workspace-catalog/worktree-event-runtime-activation.test.ts",
-        "src/renderer/src/hooks/ipc-events/workspace-catalog/worktree-event-lineage-refresh.test.ts",
+        "src/renderer/src/mobile-terminal-surface-recovery/notified-workspace-activation.test.ts",
         "src/renderer/src/mobile-terminal-surface-recovery/reattach-success-settle.test.ts",
         "src/renderer/src/mobile-terminal-surface-recovery/deferred-session-reattach-connect-retain.test.ts",
         "src/renderer/src/mobile-terminal-surface-recovery/deferred-session-reattach-live-bookmark.test.ts",
@@ -476,7 +450,7 @@
         "src/main/mobile-terminal-surface-recovery/folder-workspace-terminal-inventory.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/mobile-terminal-surface-recovery src/renderer/src/mobile-terminal-surface-recovery src/renderer/src/hooks/ipc-events/workspace-catalog/worktree-event-runtime-activation.test.ts src/renderer/src/hooks/ipc-events/workspace-catalog/worktree-event-lineage-refresh.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/mobile-terminal-surface-recovery src/renderer/src/mobile-terminal-surface-recovery src/renderer/src/mobile-terminal-surface-recovery/notified-workspace-activation.test.ts"
       ]
     },
     {
@@ -527,7 +501,7 @@
         "src/main/ipc/agent-hooks/agent-status-ipc-boundary.ts",
         "src/main/native-chat/session-file-resolver.ts",
         "src/main/native-chat/transcript-filesystem/wsl-transcript-fs-access.ts",
-        "src/main/runtime/terminal/input/terminal-agent-prompt-resubmit.ts",
+        "src/main/runtime/terminal/input/terminal-agent-prompt-guards.ts",
         "src/main/runtime/terminal/input/agent-prompt-submission-verification.ts",
         "src/main/runtime/terminal/input/terminal-input-admission.ts",
         "src/main/runtime/terminal/input/agent-prompt-signals.ts",
@@ -753,7 +727,7 @@
         "mobile/src/native-chat-paged-out-echo/mobile-drafts-paged-out.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/shared/native-chat-paged-out-echo src/renderer/src/native-chat-paged-out-echo src/renderer/src/components/native-chat/session/terminal/delivery/use-native-chat-pending-delivery.test.tsx src/shared/native-chat/transcript/pending-sends/native-chat-pending-sends.test.ts",
+        "pnpm exec vitest run --config config/vitest.config.ts src/shared/native-chat-paged-out-echo src/renderer/src/native-chat-paged-out-echo",
         "pnpm --dir mobile exec vitest run src/native-chat-paged-out-echo src/session/native-chat/composer"
       ]
     },
@@ -1136,11 +1110,6 @@
           "why": "local document reads no longer inherit the mobile text cap"
         },
         {
-          "file": "src/main/browser/document-preview/doc-preview-file-reader.test.ts",
-          "mustContain": "readDocPreviewFile",
-          "why": "Paired runtime preview reads preserve document size and grant checks."
-        },
-        {
           "file": "src/shared/rpc-contract/filesystem/files-params.ts",
           "mustContain": "DocumentPreviewChunkRequest.optional()",
           "why": "optional scoped chunks retain old-client full-response behavior"
@@ -1162,7 +1131,7 @@
         "src/main/document-preview-size/document-preview-chunk-reader.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/document-preview-size src/shared/document-preview/doc-preview-file-access.test.ts src/main/browser/document-preview/doc-preview-file-reader.test.ts src/main/browser/document-preview/doc-preview-protocol.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/document-preview-size"
       ]
     },
     {
@@ -1293,11 +1262,6 @@
       ],
       "seams": [
         {
-          "file": ".github/workflows/ssh-windows-hosts.yml",
-          "mustContain": "goal-mode",
-          "why": "the sparse Windows checkout must include the goal driver sources the orcad build bundles"
-        },
-        {
           "file": "src/packages/process-host/src/run-process.ts",
           "mustContain": "spec.onStdout?.(chunk)",
           "why": "observe structured draft activity through the canonical process runner"
@@ -1324,13 +1288,13 @@
         },
         {
           "file": "src/main/index.ts",
-          "mustContain": "startGoalFeatureForMainProcess",
-          "why": "the host service starts after the terminal runtime"
+          "mustContain": "stopGoalFeatureForMainProcess",
+          "why": "the host service is torn down on quit"
         },
         {
-          "file": "src/main/startup/runtime-startup/main-process-runtime-launch.ts",
-          "mustContain": "afterTerminalRuntimeStartup",
-          "why": "the Goal host starts after terminal startup"
+          "file": "src/main/startup/runtime-startup/chat-journal-startup.ts",
+          "mustContain": "startGoalFeatureForMainProcess()",
+          "why": "the Goal host starts once terminal startup is bound and before RPC binds; upstream's launch file sits at its line cap"
         },
         {
           "file": "src/main/persistence/applying-settings/ui-selection-normalization.ts",
@@ -1338,7 +1302,7 @@
           "why": "host UI normalization preserves Goals during persistence and state broadcasts"
         },
         {
-          "file": "src/main/persistence/applying-settings/persistence-ui-state.test.ts",
+          "file": "src/main/goals/goal-sidebar-route-persistence.test.ts",
           "mustContain": "'goals'",
           "why": "real Store loading and partial UI updates retain the Goals route"
         },
@@ -1479,7 +1443,7 @@
         }
       ],
       "tests": [
-        "src/main/persistence/applying-settings/persistence-ui-state.test.ts",
+        "src/main/goals/goal-sidebar-route-persistence.test.ts",
         "src/main/goals/goal-control-service.test.ts",
         "src/main/goals/goal-driver-launch.test.ts",
         "src/main/goals/goal-revision-control.test.ts",
@@ -1521,7 +1485,7 @@
         "goal-mode/cli/goal-loop-confirm-box.test.mjs"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/goals src/shared/goals src/renderer/src/goals src/renderer/src/components/goals src/main/runtime/rpc/methods/goals.test.ts src/main/persistence/applying-settings/persistence-ui-state.test.ts src/main/goals/goal-driver-resources.test.ts src/cli/goals",
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/goals src/shared/goals src/renderer/src/goals src/renderer/src/components/goals src/main/runtime/rpc/methods/goals.test.ts src/main/goals/goal-sidebar-route-persistence.test.ts src/main/goals/goal-driver-resources.test.ts src/cli/goals",
         "node --test --experimental-test-module-mocks goal-mode/cli/*.test.mjs"
       ]
     },
@@ -1665,7 +1629,7 @@
           "why": "only the selected split pane supplies the tab-wide task on the execution host"
         },
         {
-          "file": "src/wsl-guest/agent-hooks/status/agent-hook-server-codex-side-thread.test.ts",
+          "file": "src/main/codex-session-ownership/codex-unbacked-session-replacement.test.ts",
           "mustContain": "D-009 keeps a rollout-less Codex session from replacing a backed row",
           "why": "the relay-side ephemeral-takeover case pins the same kept D-009 rule (D-011)"
         },
@@ -1678,11 +1642,6 @@
           "file": "src/renderer/src/session-names/activity-prompt-priority.test.ts",
           "mustContain": "stable prompt outranks a container alias",
           "why": "Activity search follows the common priority without losing the task text"
-        },
-        {
-          "file": "src/renderer/src/lib/agent-session/history/title-sync/ai-vault-tab-title-sync-inputs.test.ts",
-          "mustContain": "expect(unchangedEnumerations).toBe(1)",
-          "why": "initial binding inventory is separate from the zero-enumeration live-update contract"
         },
         {
           "file": "src/renderer/src/session-names/session-name-generated-title-admission.test.ts",
@@ -1793,6 +1752,11 @@
           "file": "src/renderer/src/components/right-sidebar/ai-vault/session-actions/ai-vault-session-continuation.ts",
           "mustContain": "getScannedSessionDisplayName",
           "why": "History continuation captures the public display name separately from transcript identity"
+        },
+        {
+          "file": "src/renderer/src/components/right-sidebar/ai-vault/session-actions/ai-vault-session-launch-actions.ts",
+          "mustContain": "  prepareAiVaultSessionContinuation\n} from './ai-vault-session-continuation'",
+          "why": "Non-database continuation goes through the fork wrapper so it carries the public display name, not upstream's shared helper directly"
         },
         {
           "file": "src/renderer/src/components/right-sidebar/ai-vault/session-list/AiVaultSessionSubagents.tsx",
@@ -2045,11 +2009,6 @@
           "why": "a refused local hook from another process still asks whether the owner exited"
         },
         {
-          "file": "src/wsl-guest/agent-hooks/status/agent-hook-interrupt-reconciliation.test.ts",
-          "mustContain": "CLAUDE_SESSION_ACTIVITY_WINDOW_MS",
-          "why": "upstream's new-session case must replace the row after the activity window, or the guard drops it"
-        },
-        {
           "file": "src/renderer/src/components/right-sidebar/use-canonical-session-titles.ts",
           "mustContain": "useSessionNameIndex",
           "why": "History search and rows consume the same native-first name projection"
@@ -2239,7 +2198,6 @@
         "src/shared/session-names/session-name-slot.test.ts",
         "src/main/session-names/codex-session-metadata.test.ts",
         "src/renderer/src/session-names/session-name-subscriptions.test.tsx",
-        "src/renderer/src/lib/agent-session/history/title-sync/ai-vault-tab-title-sync-inputs.test.ts",
         "src/renderer/src/session-names/session-name-generated-title-admission.test.ts",
         "src/main/session-names/provider-name-evidence.test.ts",
         "src/main/session-names/provider-name-file-chain.test.ts",
@@ -2251,7 +2209,6 @@
         "src/shared/agent-session-fallback-title.test.ts",
         "src/shared/session-names/history-search-canonical-title.test.ts",
         "src/renderer/src/components/terminal-pane/pty-connection/resume-identity-launch-config.test.ts",
-        "src/main/agent-hooks/server/testing/presence/server-agent-presence.test.ts",
         "src/renderer/src/session-names/mirror-host-manual-name.test.ts",
         "src/renderer/src/session-names/mirrored-terminal-name-ownership.test.ts",
         "src/main/codex-session-ownership/codex-unbacked-session-replacement.test.ts",
@@ -2270,7 +2227,7 @@
         "mobile/src/session-names/mobile-session-names.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/activity src/renderer/src/store/slices/agent-status/status-ownership/agent-status-batch.test.ts src/renderer/src/store/slices/agent-status/agent-status.test.ts",
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/activity",
         "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/lib/agent-session/history/title-sync src/renderer/src/session-names/session-name-generated-title-admission.test.ts",
         "pnpm exec vitest run --config config/vitest.config.ts src/main/session-names/session-name-notification-delivery.test.ts src/renderer/src/session-names/session-name-notification.test.ts src/renderer/src/session-names/session-name-notification-ingress.test.ts src/renderer/src/session-names/session-name-notification-paired-ingress.test.ts",
         "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/session-names",
@@ -2280,7 +2237,7 @@
         "pnpm exec vitest run --config config/vitest.config.ts src/shared/session-names src/shared/session-display-title.test.ts src/shared/workspace-layout/tab-groups/tab-title-resolution.test.ts",
         "pnpm exec vitest run --config config/vitest.config.ts src/shared/claude-session-ownership src/main/claude-session-ownership",
         "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/terminal-pane/pty-connection/resume-identity-launch-config.test.ts",
-        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/main/agent-hooks/server/testing/presence/server-agent-presence.test.ts src/renderer/src/session-names/mirror-host-manual-name.test.ts",
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/session-names/mirror-host-manual-name.test.ts",
         "pnpm --dir mobile exec vitest run --maxWorkers=2 src/session-names/mobile-session-names.test.ts"
       ]
     },
@@ -2400,11 +2357,6 @@
       ],
       "seams": [
         {
-          "file": "src/main/orcad/orcad-push-startup.test.ts",
-          "mustContain": "toHaveBeenCalledTimes(2)",
-          "why": "Verify hook and artifact settings subscriptions are cleaned up on host shutdown."
-        },
-        {
           "file": "src/main/startup/runtime-startup/main-process-runtime-service.ts",
           "mustContain": "startArtifactShareForMainProcess",
           "why": "the share service follows the app and replaces the cloud artifact service"
@@ -2510,7 +2462,7 @@
           "why": "Chinese copy for sharing UI"
         },
         {
-          "file": "src/cli/index.test.ts",
+          "file": "src/cli/self-hosted-artifacts/artifact-share-cli-comments.test.ts",
           "mustContain": "'artifactShare.list'",
           "why": "CLI routing test follows the local network artifact list method"
         },
@@ -2596,7 +2548,7 @@
         "src/renderer/src/components/self-hosted-artifacts/share-button/lan-artifact-share-machine.test.ts",
         "src/renderer/src/components/self-hosted-artifacts/share-button/lan-artifact-share-target.test.ts",
         "src/renderer/src/components/self-hosted-artifacts/share-button/EditorPanelHeader.lan-share.test.tsx",
-        "src/cli/index.test.ts",
+        "src/cli/self-hosted-artifacts/artifact-share-cli-comments.test.ts",
         "src/renderer/src/components/self-hosted-artifacts/settings/lan-artifacts-settings-navigation.test.ts",
         "src/renderer/src/components/self-hosted-artifacts/settings/orca-account-settings-pane.test.tsx",
         "src/renderer/src/components/self-hosted-artifacts/page/lan-artifact-host-list.test.tsx",
@@ -2604,7 +2556,7 @@
         "src/renderer/src/components/self-hosted-artifacts/share-button/DocPreviewToolbar.lan-share.test.tsx"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/self-hosted-artifacts src/cli/self-hosted-artifacts src/renderer/src/components/self-hosted-artifacts src/cli/index.test.ts src/renderer/src/components/browser-pane/workspace-doc src/renderer/src/components/unexpected-signout config/scripts/build-artifact-share-viewer.test.mjs",
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/self-hosted-artifacts src/cli/self-hosted-artifacts src/renderer/src/components/self-hosted-artifacts src/cli/self-hosted-artifacts/artifact-share-cli-comments.test.ts src/renderer/src/components/browser-pane/workspace-doc src/renderer/src/components/unexpected-signout config/scripts/build-artifact-share-viewer.test.mjs",
         "pnpm run build:artifact-share-viewer"
       ]
     },
@@ -2669,7 +2621,7 @@
         "src/renderer/src/components/tab-entry-remote-path/tab-create-entry-classifier-remote-paths.test.ts"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/tab-entry-remote-path src/renderer/src/components/tab-bar/create-entry/tab-create-entry-classifier.test.ts src/renderer/src/components/tab-bar/create-entry/tab-create-entry-local-path.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/tab-entry-remote-path"
       ]
     },
     {
@@ -2881,6 +2833,7 @@
       "goal": "移动端从当前 claude / codex 会话新建续接会话，复用主机既有 RPC，不改 wire",
       "journal": "docs/issue/移动端在新会话中继续/journal.md",
       "dependsOn": [
+        "src/shared/agent-session/conversation-context/agent-session-continuation.ts",
         "mobile/src/components/sheets/ActionSheetModal.tsx",
         "src/shared/agent-session/lifecycle/provider-handles/opencode-sqlite-session-path.ts",
         "mobile/src/platform/haptics/haptics.ts",
@@ -2916,16 +2869,6 @@
       ],
       "seams": [
         {
-          "file": "src/renderer/src/lib/agent-session/context/agent-session-continuation.ts",
-          "mustContain": "shared/agent-session-continuation/continuation-prompt",
-          "why": "desktop keeps its import path while the prompt builder lives in shared"
-        },
-        {
-          "file": "src/renderer/src/lib/agent-session/context/agent-session-fork-context.ts",
-          "mustContain": "shared/agent-session-continuation/bounded-session-transcript",
-          "why": "fork and continuation share one bounded-transcript implementation"
-        },
-        {
           "file": "mobile/scripts/build-terminal-webview-engine.mjs",
           "mustContain": "minifyIdentifiers",
           "why": "continuation is the first mobile path that watches a terminal from birth, so it is the one that hits the minifySyntax defect that kills xterm on DECRQM"
@@ -2941,18 +2884,18 @@
           "why": "the long-press menu takes the entry by injection, like bulk close"
         },
         {
-          "file": "mobile/src/session/MobileSessionSheets.tsx",
+          "file": "mobile/src/session/tabs/MobileTerminalTabActionSheet.tsx",
           "mustContain": "sessionContinuationActions: useMobileSessionContinuationActions()",
-          "why": "the picker mounts beside the other session sheets"
+          "why": "the picker mounts with the terminal tab action sheet upstream split out of the session sheets"
         },
         {
           "file": "mobile/src/terminal/session/creation/use-mobile-session-terminal-create-actions.ts",
-          "mustContain": "terminal-without-handle",
+          "mustContain": "onCreateResult?.(created.terminal)",
           "why": "the create action distinguishes a live tab with no handle from a failed create"
         },
         {
           "file": "config/scripts/build/mobile-web-app/verify-mobile-web-app-bundle.mjs",
-          "mustContain": "['./h/_layout.tsx', 104]",
+          "mustContain": "['./h/_layout.tsx', 108]",
           "why": "the route-prefix sweep records continuation's measured chunk-sharing change"
         },
         {
@@ -2970,13 +2913,11 @@
         "src/shared/agent-session-continuation/continuation-prompt.test.ts",
         "mobile/src/session-continuation/continuation-delivery.test.ts",
         "mobile/src/session-continuation/continuation-source.test.ts",
-        "mobile/src/session-continuation/terminal-engine-request-mode.test.ts",
-        "config/scripts/build/mobile-web-app/build-mobile-web-app-bundle.test.mjs"
+        "mobile/src/session-continuation/terminal-engine-request-mode.test.ts"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/shared/agent-session-continuation",
-        "pnpm --dir mobile exec vitest run src/session-continuation",
-        "pnpm exec vitest run --config config/vitest.config.ts config/scripts/build/mobile-web-app/build-mobile-web-app-bundle.test.mjs"
+        "pnpm --dir mobile exec vitest run src/session-continuation"
       ]
     },
     {
@@ -3028,7 +2969,7 @@
         "src/renderer/src/components/rich-markdown-override/EditorMarkdownFileSurface.override.test.tsx"
       ],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/rich-markdown-override src/renderer/src/components/editor/markdown/render-mode/markdown-rich-mode.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/rich-markdown-override"
       ]
     },
     {
@@ -3145,11 +3086,6 @@
       ],
       "seams": [
         {
-          "file": "mobile/src/session/native-chat/composer/MobileNativeChatComposer.test.ts",
-          "mustContain": "Paperclip",
-          "why": "Composer fixture includes the attachment icon."
-        },
-        {
           "file": "src/main/runtime/rpc/methods/rpc-method-registry.ts",
           "mustContain": "...FILE_ATTACHMENT_UPLOAD_METHODS",
           "why": "the host exposes the upload methods (REQ-002, REQ-004)"
@@ -3183,11 +3119,6 @@
           "file": "mobile/src/session/MobileSessionSurface.tsx",
           "mustContain": "<MobileSessionFileAttachmentsScope files={controller.fileAttachments}>",
           "why": "the Photo / File sheet mounts with the session's other sheets, outside upstream render tests (REQ-001)"
-        },
-        {
-          "file": "mobile/src/session/__mocks__/mobile-prompt-render-mocks.ts",
-          "mustContain": "'Paperclip'",
-          "why": "the upstream prompt render icon mock includes the attachment icon"
         },
         {
           "file": "mobile/src/terminal/session/accessory-keys/MobileTerminalMoreKeysSheet.tsx",
@@ -3230,19 +3161,9 @@
           "why": "the session page may use native.file.pick where the shell has it and falls back where not (REQ-005)"
         },
         {
-          "file": "config/scripts/mobile-web-app/routing/mobile-web-app-page-grant-call-sites.mjs",
-          "mustContain": "mobile-web-app-file-attachment-grant.test.mjs",
-          "why": "the grant census counts native.file.pick as censused by the feature's own test"
-        },
-        {
           "file": "mobile/web-entry/web-overrides.json",
           "mustContain": "src/file-attachment-upload/file-attachment-picker.web.ts",
           "why": "the page build lists the web picker that keeps the native document picker out of the bundle"
-        },
-        {
-          "file": "config/scripts/mobile-web-app/preview/mobile-web-app-held-press-probe-routes.mjs",
-          "mustContain": "fileAttachments: { openTerminalSheet",
-          "why": "the key-bar probe mounts the command dock, which now opens the attach sheet"
         },
         {
           "file": "src/shared/execution-host/host-operation-ownership.ts",
@@ -3452,12 +3373,10 @@
       "tests": [
         "src/shared/terminal-launch-diagnostics/launch-evidence.test.ts",
         "src/main/terminal-launch-diagnostics/launch-trace.test.ts",
-        "src/renderer/src/terminal-launch-diagnostics/launch-origin.test.ts",
-        "src/renderer/src/components/terminal-pane/pty-connection/tests/pty-connection-restore-and-resume.test.ts"
+        "src/renderer/src/terminal-launch-diagnostics/launch-origin.test.ts"
       ],
       "checks": [
-        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/terminal-launch-diagnostics src/main/terminal-launch-diagnostics src/renderer/src/terminal-launch-diagnostics",
-        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/components/terminal-pane/pty-connection/tests/pty-connection-restore-and-resume.test.ts"
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/shared/terminal-launch-diagnostics src/main/terminal-launch-diagnostics src/renderer/src/terminal-launch-diagnostics"
       ]
     },
     {
@@ -3988,11 +3907,11 @@
       "seams": [
         {
           "file": "config/scripts/build/mobile-web-app/verify-mobile-web-app-bundle.mjs",
-          "mustContain": "MOBILE_WEB_APP_BUNDLE_MAX_TOTAL_BYTES + FORK_MOBILE_WEB_BUNDLE_ALLOWANCE_BYTES",
+          "mustContain": "MOBILE_WEB_APP_BUNDLE_MAX_EAGER_BYTES + FORK_MOBILE_WEB_BUNDLE_ALLOWANCE_BYTES",
           "why": "The phone page's size fence counts the fork's routes against their own measured allowance, not upstream's headroom (REQ-017)"
         },
         {
-          "file": "tests/e2e/agents/remote-sessions/remote-agent-completion-authority.unit.test.ts",
+          "file": "src/renderer/src/local-tasks/remote-agent-completion-contact.test.ts",
           "mustContain": "remote agent completion authority",
           "why": "Remote completion requires shared contact before fenced execution-host evidence can be read"
         },
@@ -4037,7 +3956,7 @@
           "why": "A task preview projects an already live terminal through the background notifier without creating a PTY or navigating (REQ-028)"
         },
         {
-          "file": "src/main/index.ts",
+          "file": "src/main/startup/runtime-startup/chat-journal-startup.ts",
           "mustContain": "startLocalTasksForMainProcess()",
           "why": "The desktop app opens the task library before the RPC server binds (REQ-018)"
         },
@@ -4077,13 +3996,8 @@
           "why": "The desktop ships the phone's task page as a web route (REQ-017)"
         },
         {
-          "file": "config/scripts/mobile-web-app/mobile-web-app-page-route-modules.mjs",
-          "mustContain": "['/h/[hostId]/local-tasks', 'app/h/[hostId]/local-tasks.tsx'],",
-          "why": "The route's module is listed so the grant and haptics censuses cover it (REQ-017)"
-        },
-        {
           "file": "config/scripts/build/mobile-web-app/verify-mobile-web-app-bundle.mjs",
-          "mustContain": "['./h/[hostId]/local-tasks.tsx', 51],",
+          "mustContain": "['./h/[hostId]/local-tasks.tsx', 52],",
           "why": "The route-prefix sweep is re-measured with the task page's route in the tree (REQ-017)"
         },
         {
@@ -4297,11 +4211,6 @@
           "why": "A card knows whether its workspace belongs to a task, so a workspace linked only to one has hover details (REQ-016)"
         },
         {
-          "file": "src/renderer/src/components/sidebar/workspace-card/surface/worktree-card-presentation.tsx",
-          "mustContain": "(card.localTaskLinked ||",
-          "why": "Compact and new-style cards open hover details for a workspace whose only link is its task (REQ-016)"
-        },
-        {
           "file": "src/cli/specs/index.ts",
           "mustContain": "...LOCAL_TASK_COMMAND_SPECS",
           "why": "orca task list / show / current / comment / status are part of the CLI's command table"
@@ -4502,11 +4411,6 @@
           "why": "Settings → Task sources lists Local tasks after the upstream providers, shown or hidden like them (REQ-008)"
         },
         {
-          "file": "src/renderer/src/components/sidebar/workspace-card/surface/worktree-card-header.tsx",
-          "mustContain": "<LocalTaskWorkspaceChip worktree={worktree} />",
-          "why": "A sidebar workspace card names the local task it is linked to"
-        },
-        {
           "file": "src/renderer/src/components/sidebar/workspace-actions/context-menu/WorktreeContextMenuView.tsx",
           "mustContain": "<LocalTaskWorkspaceMenuItem worktree={worktree} disabled={isDeleting} />",
           "why": "A workspace's context menu links it to a local task"
@@ -4582,7 +4486,7 @@
           "why": "Expose the actual chat, terminal fallback, or failed outcome without changing legacy acceptance semantics."
         },
         {
-          "file": "src/renderer/src/lib/workspace/creation/worktree-creation-structured-session.test.ts",
+          "file": "src/renderer/src/local-tasks/local-task-creation-outcome.test.ts",
           "mustContain": "reports a host-declined terminal instead of claiming a chat",
           "why": "Keep task session association aligned with structured launch fallback."
         },
@@ -4672,7 +4576,7 @@
           "why": "Task-first mobile copy and optional explicit scope preserve the existing session route (REQ-017, REQ-028)"
         },
         {
-          "file": "mobile/src/session/tabs/use-notification-pane-navigation.test.tsx",
+          "file": "mobile/src/local-tasks/local-task-drawer-pane-override.test.tsx",
           "mustContain": "paneKeyOverride",
           "why": "Task-first mobile copy and optional explicit scope preserve the existing session route (REQ-017, REQ-028)"
         },
@@ -4828,13 +4732,9 @@
         }
       ],
       "tests": [
-        "config/scripts/build/mobile-web-app/build-mobile-web-app-bundle.test.mjs",
-        "tests/e2e/agents/remote-sessions/remote-agent-completion-authority.unit.test.ts",
-        "src/renderer/src/components/terminal-pane/pty-connection/tests/pty-connection-completion-and-notification.test.ts",
-        "src/renderer/src/components/terminal-pane/pty-connection/tests/pty-connection-foreground-agent.test.ts",
+        "src/renderer/src/local-tasks/remote-agent-completion-contact.test.ts",
         "src/renderer/src/runtime/runtime-terminal-inspection-contact.test.ts",
         "src/renderer/src/components/terminal-pane/pane-foreground-agent-contact.test.ts",
-        "src/renderer/src/runtime/hosted-terminals/inspection/runtime-terminal-inspection.test.ts",
         "src/main/runtime/terminal/launch/wsl-host-agent-terminal-launch.test.ts",
         "src/main/local-tasks/local-task-dispatcher-workspace.test.ts",
         "src/renderer/src/local-tasks/local-task-dispatcher-client.test.ts",
@@ -4918,7 +4818,7 @@
         "mobile/src/local-tasks/local-task-create-source-start.test.ts",
         "mobile/src/local-tasks/use-local-task-create-source.test.tsx",
         "src/renderer/src/local-tasks/local-task-background-services.test.tsx",
-        "src/renderer/src/lib/workspace/creation/worktree-creation-structured-session.test.ts",
+        "src/renderer/src/local-tasks/local-task-creation-outcome.test.ts",
         "src/renderer/src/components/local-tasks/LocalTaskPage.execution.test.tsx",
         "src/renderer/src/local-tasks/local-task-remote-creation-target.test.tsx",
         "src/renderer/src/local-tasks/local-task-start-work.test.ts",
@@ -4936,7 +4836,7 @@
         "src/renderer/src/local-tasks/local-task-proposal-session-items.test.ts",
         "src/renderer/src/lib/active-agent-note-send-delivery-guard.test.ts",
         "src/renderer/src/local-tasks/local-task-dispatch-host-options.test.ts",
-        "src/shared/execution-host/execution-host-registry.test.ts",
+        "src/shared/local-tasks/local-task-all-hosts-registry.test.ts",
         "src/renderer/src/components/local-tasks/LocalTaskSessionPanelSlot.test.tsx",
         "src/renderer/src/local-tasks/local-task-page-store.test.ts",
         "src/main/local-tasks/local-task-dispatcher.test.ts",
@@ -4992,9 +4892,9 @@
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/local-tasks src/shared/local-tasks src/main/runtime/rpc/methods/local-tasks.test.ts src/main/runtime/terminal/launch/wsl-host-agent-terminal-launch.test.ts src/main/runtime/rpc/server/fork-mobile-rpc-method-allowlist.test.ts src/cli/local-tasks src/main/ipc/runtime-client/desktop-runtime-sender-lifecycle.test.ts",
-        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/local-tasks src/renderer/src/components/local-tasks src/renderer/src/components/task-page tests/e2e/agents/remote-sessions/remote-agent-completion-authority.unit.test.ts src/renderer/src/components/terminal-pane/pty-connection/tests/pty-connection-completion-and-notification.test.ts src/renderer/src/components/terminal-pane/pty-connection/tests/pty-connection-foreground-agent.test.ts src/renderer/src/runtime/runtime-terminal-inspection-contact.test.ts src/renderer/src/components/terminal-pane/pane-foreground-agent-contact.test.ts src/renderer/src/runtime/hosted-terminals/inspection/runtime-terminal-inspection.test.ts src/renderer/src/components/cmd-j src/renderer/src/lib/workspace/creation/worktree-creation-structured-session.test.ts src/renderer/src/lib/active-agent-note-send-delivery-guard.test.ts",
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/local-tasks src/renderer/src/components/local-tasks src/renderer/src/components/task-page src/renderer/src/local-tasks/remote-agent-completion-contact.test.ts src/renderer/src/runtime/runtime-terminal-inspection-contact.test.ts src/renderer/src/components/terminal-pane/pane-foreground-agent-contact.test.ts src/renderer/src/components/cmd-j src/renderer/src/local-tasks/local-task-creation-outcome.test.ts src/renderer/src/lib/active-agent-note-send-delivery-guard.test.ts",
         "pnpm --dir mobile exec vitest run src/local-tasks src/session/tabs/use-notification-pane-navigation.test.tsx src/components/bottom-drawer src/components/markdown",
-        "pnpm exec vitest run --config config/vitest.config.ts config/scripts/build/mobile-web-app/build-mobile-web-app-bundle.test.mjs config/scripts/mobile-web-app-file-attachment-grant.test.mjs"
+        "pnpm exec vitest run --config config/vitest.config.ts config/scripts/mobile-web-app-file-attachment-grant.test.mjs"
       ]
     },
     {
@@ -5017,21 +4917,11 @@
           "file": "src/main/gitea/client.ts",
           "mustContain": "confirmGiteaRepoRef(repo, { apiBaseConfigured: getAuthConfig().apiBaseUrl !== null })",
           "why": "Confirm an unclaimed host is Gitea before treating its remote as a Gitea repository"
-        },
-        {
-          "file": "src/main/gitea/client-scan-invalidation.test.ts",
-          "mustContain": "vi.mock('../gitea-host-verification/gitea-host-probe'",
-          "why": "Scan-cache tests run after detection; host verification has its own tests"
-        },
-        {
-          "file": "src/main/source-control/hosted-review-gitea.integration.test.ts",
-          "mustContain": "url.pathname === '/api/v1/version'",
-          "why": "The fake Gitea answers the host probe, and the probe must not carry the token"
         }
       ],
       "tests": ["src/main/gitea-host-verification/gitea-host-probe.test.ts"],
       "checks": [
-        "pnpm exec vitest run --config config/vitest.config.ts src/main/gitea-host-verification src/main/gitea src/main/source-control/hosted-review-gitea.integration.test.ts src/main/source-control/hosted-review.test.ts"
+        "pnpm exec vitest run --config config/vitest.config.ts src/main/gitea-host-verification src/main/gitea"
       ]
     },
     {
@@ -5196,7 +5086,7 @@
       ],
       "seams": [
         {
-          "file": "tests/e2e/cross-version-wire/release-checkouts/release-checkout.unit.test.ts",
+          "file": "config/scripts/cross-version-wire-fixture-compat/release-checkout-terminal-protocol.test.ts",
           "mustContain": "terminal/stream/terminal-stream-protocol.ts",
           "why": "The checkout unit cases cover the shipped and moved terminal protocol paths."
         },
@@ -5217,11 +5107,11 @@
         }
       ],
       "tests": [
-        "tests/e2e/cross-version-wire/release-checkouts/release-checkout.unit.test.ts",
+        "config/scripts/cross-version-wire-fixture-compat/release-checkout-terminal-protocol.test.ts",
         "config/scripts/cross-version-wire-fixture-compat/release-candidates.test.mjs"
       ],
       "checks": [
-        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts tests/e2e/cross-version-wire/release-checkouts/release-checkout.unit.test.ts config/scripts/cross-version-wire-fixture-compat/release-candidates.test.mjs config/scripts/daemon-protocol/admission/check-daemon-protocol-crossing.test.mjs"
+        "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts config/scripts/cross-version-wire-fixture-compat/release-checkout-terminal-protocol.test.ts config/scripts/cross-version-wire-fixture-compat/release-candidates.test.mjs config/scripts/daemon-protocol/admission/check-daemon-protocol-crossing.test.mjs"
       ]
     },
     {

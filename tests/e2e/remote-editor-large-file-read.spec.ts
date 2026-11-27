@@ -9,7 +9,7 @@ import {
   launchPairedElectronClient,
   type PairedElectronClient
 } from './remote/paired-runtime/client-hosts/paired-electron-client'
-import { createPdfFindFixture } from './editor/pdf/pdf-find-fixture'
+import { createPdfFindFixture } from './fork-fixtures/editor/pdf/pdf-find-fixture'
 import { waitForActiveWorktree, waitForSessionReady } from './desktop/renderer-probes/store'
 import { RUNTIME_EDITOR_TEXT_MAX_BYTES } from '../../src/renderer/src/runtime-large-file/assemble-runtime-file-chunks'
 

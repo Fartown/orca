@@ -95,6 +95,9 @@ const {
 const {
   buildMacShipItScheduling
 } = require('./scripts/desktop-distribution/macos/macos-shipit-scheduling.cjs')
+const {
+  packageWindowsWerHelper
+} = require('./scripts/desktop-distribution/windows/package-windows-wer-helper.cjs')
 
 const {
   buildMacNativeAddon
@@ -381,7 +384,6 @@ module.exports = {
     'out/main/copilot/**',
     'out/main/cursor/**',
     'out/main/droid/**',
-    'out/main/gemini/**',
     'out/main/gitlab/projects/project-ref-parser.js',
     'out/main/grok/**',
     'out/main/hermes/**',
@@ -402,6 +404,7 @@ module.exports = {
     'out/main/startup/network-compatibility/http1-compatibility-marker.js',
     // `orca agent hooks` gives main hook code an app environment in the CLI process.
     'out/main/backend/node-service-environment.js',
+    'out/main/mcp-servers/agent-files/mcp-connect-bridge.js',
     'out/main/daemon-entry.js',
     'out/main/session-scanner-service-entry.js',
     'out/main/wsl-transcript-fs-process-entry.js',
@@ -467,6 +470,9 @@ module.exports = {
     )
   },
   afterPack: async (context) => {
+    if (context.electronPlatformName === 'win32') {
+      packageWindowsWerHelper(context.appOutDir, context.packager.appInfo.productFilename)
+    }
     const resourcesDir =
       context.electronPlatformName === 'darwin'
         ? join(
@@ -630,6 +636,11 @@ module.exports = {
         context.packager
       )
       await signMacStandaloneHelper(
+        join(resourcesDir, '..', 'MacOS', 'orca-socket-owner'),
+        'orca-socket-owner',
+        context.packager
+      )
+      await signMacStandaloneHelper(
         finalizePackagedProviderExec(resourcesDir, 'darwin'),
         'orca-provider-exec',
         context.packager
@@ -758,6 +769,10 @@ module.exports = {
         from: 'native/process-footprint-macos/.build/release/orca-process-footprint',
         to: 'MacOS/orca-process-footprint'
       },
+      {
+        from: 'native/socket-owner-macos/.build/release/orca-socket-owner',
+        to: 'MacOS/orca-socket-owner'
+      },
       // Nested executables belong in Contents/MacOS, where afterPack signs them before the app.
       {
         from: 'native/provider-exec/.build/darwin-${arch}/orca-provider-exec',
@@ -793,7 +808,11 @@ module.exports = {
       entry: {
         // Why: Electron reports WM_CLASS=orca for the visible Linux window;
         // GNOME docks need an exact match to group it with orca-ide.desktop.
-        StartupWMClass: 'orca'
+        StartupWMClass: 'orca',
+        // Why: without GenericName/Keywords, searches like "coding" or "agent" miss Orca,
+        // and the bare name collides with the GNOME screen reader.
+        GenericName: 'IDE',
+        Keywords: 'IDE;agent;agents;AI;coding;terminal;git;worktree;'
       }
     },
     extraResources: [
@@ -824,7 +843,7 @@ module.exports = {
     // Keep local artifacts aligned with the release pipeline.
     target: ['AppImage', 'deb', 'rpm'],
     maintainer: 'stablyai',
-    category: 'Utility'
+    category: 'Development;IDE'
   },
   appImage: {
     artifactName: isLinuxArm64Release ? 'orca-linux-arm64.${ext}' : 'orca-linux.${ext}'

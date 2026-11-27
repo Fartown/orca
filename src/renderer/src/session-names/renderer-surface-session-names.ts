@@ -182,7 +182,8 @@ export function resolveSidebarSlotTargetSessionName(
     const paneLiveTitle = resolveAgentRowPaneLiveTitle(
       layout,
       state.runtimePaneTitlesByTabId[tab.id],
-      pane?.leafId
+      pane?.leafId,
+      undefined
     )
     return getActivitySessionName(entry, tab, generatedTitlesEnabled, {
       sessionId,

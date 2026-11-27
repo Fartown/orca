@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { getOptInOnlyExperimentVisibility } from '@/components/settings/advanced/experimental-search'
 import { buildWorkflowSettingsSections } from '@/components/settings/navigation/settings-navigation-workflow-sections'
 
 describe('Artifacts settings navigation', () => {
@@ -6,6 +7,8 @@ describe('Artifacts settings navigation', () => {
     const sections = buildWorkflowSettingsSections(
       {
         isMac: true,
+        showWorkspaceCardLayout: false,
+        optInOnlyExperiments: getOptInOnlyExperimentVisibility(null),
         isWindows: false,
         isLocalWindowsHost: false,
         isWindowsTerminalHost: false,

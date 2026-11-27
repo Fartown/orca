@@ -106,8 +106,10 @@ describe('openFilePreviewInSourcePane', () => {
     )
   })
 
-  it('keeps a remote workspace on the locally rendered document tab, still in the calling pane', () => {
+  it('keeps a workspace on an SSH host server on the locally rendered document tab, still in the calling pane', () => {
     mocks.connectionId = 'ssh-1'
+    // Upstream #47204: only the SSH host's Orca server reads its files, so the preview needs one.
+    mocks.environmentId = 'env-ssh-1'
 
     openFilePreviewInSourcePane({ ...htmlPreview, sourceGroupId: 'group-1' })
 

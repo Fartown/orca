@@ -157,12 +157,6 @@ describe('getAgentRowConversationName', () => {
       )
     ).toBeNull()
     expect(
-      getAgentRowConversationName(makeTab({ title: '✦ Gemini CLI' }), 'gemini', false)
-    ).toBeNull()
-    expect(
-      getAgentRowConversationName(makeTab({ title: '◇ Ready (orca)' }), 'gemini', false)
-    ).toBeNull()
-    expect(
       getAgentRowConversationName(makeTab({ title: 'claude agents' }), 'claude', false)
     ).toBeNull()
     expect(getAgentRowConversationName(makeTab({ title: 'Agent' }), 'claude', false)).toBeNull()

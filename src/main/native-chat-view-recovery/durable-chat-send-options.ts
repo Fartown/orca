@@ -4,7 +4,7 @@ import type { DurableChatComposer } from '../../shared/native-chat-view-recovery
 
 type ChatComposer = z.infer<typeof DurableChatComposer> | undefined
 
-/** terminal.send's durable chat branch, kept here so the upstream method stays within its line budget. */
+/** terminal.send's durable chat branch, kept out of the upstream method for its line budget; it calls these through the runtime. */
 export const durableChatSend = {
   /** Durable chat input is only confirmable through a request receipt on a running prompt agent. */
   assert(chatComposer: ChatComposer, hasRequestReceipt: boolean, usesAgentPrompt: boolean): void {

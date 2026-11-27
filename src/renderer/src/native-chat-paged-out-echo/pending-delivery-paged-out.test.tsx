@@ -1,9 +1,8 @@
 // @vitest-environment happy-dom
 import { act, cleanup, renderHook } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import type { NativeChatMessage } from '../../../shared/native-chat/native-chat-types'
 import { useNativeChatPendingDelivery } from '../components/native-chat/session/terminal/delivery/use-native-chat-pending-delivery'
-import { clearPendingSendCacheForTests } from '../components/native-chat/session/terminal/delivery/native-chat-pending'
 
 type Session = Parameters<typeof useNativeChatPendingDelivery>[0]['session']
 
@@ -20,9 +19,13 @@ const atSend: Session = {
 // The pane was hidden while the row landed; on return the newest page is all later work.
 const laterPage = [row('later-user', 'user', 5_000), row('later-answer', 'assistant', 5_010)]
 
+// The pending-echo cache is module state keyed by pane, so each case renders its own pane.
+let paneNumber = 0
+
 function renderSentEcho() {
+  const paneKey = `pane-${++paneNumber}`
   const hook = renderHook(
-    ({ session }) => useNativeChatPendingDelivery({ paneKey: 'pane', agent: 'claude', session }),
+    ({ session }) => useNativeChatPendingDelivery({ paneKey, agent: 'claude', session }),
     { initialProps: { session: atSend } }
   )
   act(() => {
@@ -32,9 +35,6 @@ function renderSentEcho() {
   return hook
 }
 
-beforeEach(() => {
-  clearPendingSendCacheForTests()
-})
 afterEach(() => {
   cleanup()
 })

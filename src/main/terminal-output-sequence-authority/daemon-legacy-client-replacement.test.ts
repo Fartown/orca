@@ -8,7 +8,7 @@ import { DaemonServer } from '../daemon/server/daemon-server'
 import { getDaemonSocketPath } from '../daemon/launch/daemon-spawner'
 import { encodeNdjson } from '../../shared/json-stream/main-process-ndjson-framer'
 import { PROTOCOL_VERSION } from '../daemon/protocol/daemon-protocol-version'
-import { createMockSubprocess } from '../daemon/providers/adapter/testing/daemon-pty-adapter-test-harness'
+import { createMockSubprocess } from '../../fork-test-support/main/daemon/providers/adapter/testing/daemon-pty-adapter-test-harness'
 
 type DaemonServerPrivate = {
   preparations: { pending: Map<string, Set<unknown>> }

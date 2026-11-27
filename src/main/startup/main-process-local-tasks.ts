@@ -16,7 +16,7 @@ export function startLocalTasksForMainProcess(): void {
     return
   }
   const profile = state.activeOrcaProfile
-  const runtime = state.runtime
+  const runtime = state.core.runtime
   if (!profile || !runtime) {
     throw new Error('Local tasks need the active Orca profile and runtime before runtime launch')
   }

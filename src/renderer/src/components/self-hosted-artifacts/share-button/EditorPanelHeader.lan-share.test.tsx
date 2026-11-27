@@ -56,6 +56,7 @@ const activeFile: OpenFile = {
 
 const baseProps = {
   activeFile,
+  viewStateId: activeFile.id,
   copiedPathVisible: false,
   isSingleDiff: false,
   isDiffSurface: false,

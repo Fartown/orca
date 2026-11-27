@@ -42,6 +42,7 @@ function renderToolbar(shareLocation: DocPreviewGrantLocation | null): string {
       previewId="page-1"
       worktreeId="wt-1"
       history={{
+        currentUrl: '',
         canGoBack: false,
         canGoForward: false,
         goBack: vi.fn(),

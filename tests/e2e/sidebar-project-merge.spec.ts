@@ -6,14 +6,14 @@ import { runProcessSync } from '@orca/process-host'
 import { expect } from '@stablyai/playwright-test'
 import { test } from './desktop/electron-fixtures/orca-app'
 import { waitForSessionReady, waitForStartupWorktreeRefresh } from './desktop/renderer-probes/store'
-import { reserveLocalPort } from './remote/managed-ssh/host-lifecycle/reserve-local-port'
+import { reserveLocalPort } from './fork-fixtures/remote/managed-ssh/host-lifecycle/reserve-local-port'
 import { focusActiveTerminalInput } from './terminal/input/terminal'
 import { getTerminalContent } from './terminal/layout/terminal-pane-identity'
 import {
   decodePairingOffer,
   encodePairingOffer
 } from '../../src/shared/remote-runtime/pairing/pairing'
-import { launchHeadlessPairedRuntimeHost } from './remote/paired-runtime/client-hosts/headless-paired-runtime-host'
+import { launchHeadlessPairedRuntimeHost } from './fork-fixtures/remote/paired-runtime/client-hosts/headless-paired-runtime-host'
 import { launchPairedElectronClient } from './remote/paired-runtime/client-hosts/paired-electron-client'
 import { projectHostSetupProjectionFromRepos } from '../../src/shared/project/host-setup/project-host-setup-projection'
 import { quotePosixShell } from '../../src/shared/shell/launch/shell-argument-quoting'

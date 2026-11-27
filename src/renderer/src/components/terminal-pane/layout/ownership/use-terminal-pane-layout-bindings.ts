@@ -53,6 +53,8 @@ export function useTerminalPaneLayoutBindings(controller: TerminalPaneLayoutCont
       }
 
       if (ptyId) {
+        // Why: a new split is selected before its shell binds, so persistence kept a bound sibling.
+        // Fork (session-names): only the binding pane's own lifetime publishes the selection.
         setTabLayout(tabId, {
           ...layoutWithoutPtyBindings,
           activeLeafId: resolveBoundPaneSelection({

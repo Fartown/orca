@@ -52,7 +52,12 @@ function projectInventory(
 ): SessionTabsInventory {
   return {
     snapshots: inventory.snapshots.map((snapshot) =>
-      projectSessionTabsForClient(snapshot, context.clientKind, context.clientCapabilities)
+      projectSessionTabsForClient(
+        snapshot,
+        context.clientKind,
+        context.clientCapabilities,
+        context.runtime
+      )
     ),
     ...(inventory.authoritative && clientUnderstandsAuthoritativeInventory(context)
       ? { authoritative: true as const }

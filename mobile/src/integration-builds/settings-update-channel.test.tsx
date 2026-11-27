@@ -37,11 +37,14 @@ vi.mock('./mobile-updates', () => ({
 }))
 vi.mock(
   '../settings/settings-screen-frame',
-  async () => (await import('../test-support/settings-chrome-test-double')).settingsFrameDouble
+  async () =>
+    (await import('../fork-test-support/test-support/settings-chrome-test-double'))
+      .settingsFrameDouble
 )
 vi.mock(
   '../components/list/ListGroup',
-  async () => (await import('../test-support/settings-chrome-test-double')).listGroupDouble
+  async () =>
+    (await import('../fork-test-support/test-support/settings-chrome-test-double')).listGroupDouble
 )
 vi.mock('react-native', () => ({
   Pressable: 'Pressable',

@@ -304,7 +304,7 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerSession
     if (!this.writeLegacyStatusRow(enriched)) {
       return undefined
     }
-    this.commitAcceptedStatusRow(rowBefore, enriched, incoming)
+    this.commitAcceptedStatusRow(rowBefore, enriched, incoming, origin === 'hook' && !restated)
     // Structured rows serialize nothing; skip the persistence walk for streaming chat updates.
     if (!enriched.structuredHost) {
       this.scheduleStatusPersist()

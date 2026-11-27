@@ -35,6 +35,13 @@ export function chooseLocalTaskSidebarMode(enabled: boolean): void {
   void localTasksClient.setPreference(SIDEBAR_TASK_MODE_PREFERENCE_KEY, value).catch(() => {})
 }
 
+/** Whether the sidebar shows the task tree: never over the Agents body, and a workspace reveal leaves it. */
+export function useLocalTaskSidebarBodyMode(sidebarBody: string): boolean {
+  const taskMode = useLocalTaskSidebarMode() && sidebarBody !== 'agents'
+  useLocalTaskSidebarRevealRedirect(taskMode)
+  return taskMode
+}
+
 export function useLocalTaskSidebarRevealRedirect(enabled: boolean): void {
   useEffect(() => {
     if (!enabled) {

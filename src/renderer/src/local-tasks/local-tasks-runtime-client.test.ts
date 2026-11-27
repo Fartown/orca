@@ -244,6 +244,8 @@ it('re-reads only the library that refused a write as stale', async () => {
   const domain = localTasksDomainStore.getState()
   for (const endpoint of ['local', 'runtime:env-1'] as const) {
     domain.openEndpoint(endpoint)
+    // The store outlives a shared-worker file, and an out-of-contact library is never re-read.
+    domain.setEndpointContact(endpoint, true)
     domain.writer(endpoint).setConnection('live')
     domain.writer(endpoint).setHostState('ready', null)
   }

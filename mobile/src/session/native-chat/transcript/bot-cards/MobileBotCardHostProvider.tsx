@@ -6,9 +6,10 @@ import {
 } from '../../../../../../src/shared/execution-host/execution-host'
 import { structuredAgentSessionPaneKey } from '../../../../../../src/shared/agent-session/view/structured-agent-session-projection'
 import { botHomeWorktreeId, hostBotsKey } from '../../../../bots/host-bots-read'
-import { publishBotLink } from '../../../../bots/pending-bot-link'
+import { useOpenBotHome } from '../../../../bots/use-open-bot-home'
 import { openMobileStructuredSession } from '../../agent-session/open-mobile-structured-session'
 import { useOpenMobileSession } from '../../../use-open-mobile-session'
+import { useOpenMobileAutomations } from '../../../../automations/use-open-mobile-automations'
 import type { RpcClient } from '../../../../transport/rpc/rpc-client-contract'
 import { WorkspaceServerContext } from '../../../../worktree/execution-hosts/workspace-server-context'
 import { publishHostBot, useHostBotsEntry } from '../../../../bots/host-bot-store'
@@ -40,6 +41,8 @@ export function MobileBotCardHostProvider({
   const server = useContext(WorkspaceServerContext)
   const [editing, setEditing] = useState<MobileBotCardOfferEdit | null>(null)
   const openMobileSession = useOpenMobileSession()
+  const openMobileAutomations = useOpenMobileAutomations()
+  const openBotHome = useOpenBotHome()
   const chatOpener = useMemo(
     () =>
       botCardChatOpener({
@@ -62,23 +65,31 @@ export function MobileBotCardHostProvider({
             paneKey: structuredAgentSessionPaneKey(opened.tabId, chatId),
             name: bot.name
           }),
-        home: (bot) => publishBotLink({ kind: 'bot', botId: bot.id })
+        // Every bot a card names runs on this chat's computer, so its Home opens here, not through link lookup.
+        home: (bot, current) =>
+          openBotHome(
+            { pairedHostId, executionHost: executionHost ?? LOCAL_EXECUTION_HOST_ID },
+            bot,
+            { current }
+          )
       }),
-    [client, pairedHostId, executionHost, openMobileSession]
+    [client, pairedHostId, executionHost, openMobileSession, openBotHome]
   )
   // Leaving this chat drops an open still waiting on the host.
   useFocusEffect(useCallback(() => chatOpener.cancel, [chatOpener]))
   const host: MobileBotCardHost = useMemo(
     () => ({
       openBotChat: chatOpener.open,
+      openBotHome: chatOpener.home,
       client,
       hostKey: hostBotsKey(pairedHostId, executionHost),
       pairedHostId,
       ...(executionHost ? { executionHost } : {}),
       hostLabel: (server ? server.name : hostTitle) ?? '',
-      editOffer: setEditing
+      editOffer: setEditing,
+      ...(executionHost ? {} : { openAutomations: () => openMobileAutomations(pairedHostId) })
     }),
-    [client, pairedHostId, executionHost, server, hostTitle, chatOpener]
+    [client, pairedHostId, executionHost, server, hostTitle, chatOpener, openMobileAutomations]
   )
   const bots = useHostBotsEntry(editing ? host.hostKey : null)?.bots
   const hostId = host.executionHost ?? LOCAL_EXECUTION_HOST_ID
@@ -97,10 +108,10 @@ export function MobileBotCardHostProvider({
               ...(editing.templatePackages ? { templatePackages: true } : {})
             }
           ]}
-          botNamesOn={() => bots?.map((bot) => bot.name) ?? []}
+          botsOn={() => bots ?? []}
           clientFor={() => host.client}
           pairedClientFor={() => host.client}
-          offer={editing}
+          seed={editing}
           onClose={() => setEditing(null)}
           onCreated={(bot) => {
             setEditing(null)

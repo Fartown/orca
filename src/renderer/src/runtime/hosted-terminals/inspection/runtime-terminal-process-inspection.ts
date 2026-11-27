@@ -58,9 +58,10 @@ export async function inspectRuntimeTerminalProcess(
   options?: {
     expectedIncarnationId?: string
     scanChildProcesses?: boolean
-    foregroundOnly?: boolean
     steadyState?: boolean
     jobMembershipOnly?: boolean
+    /** Local/daemon panes only: a fresh, terminal-scoped read of the PTY's foreground group. */
+    foregroundOnly?: boolean
   }
 ): Promise<RuntimeTerminalProcessInspection> {
   const contact = captureRuntimeTerminalInspectionContact(ptyId)

@@ -3,6 +3,7 @@ import { isAiVaultTitleAgent } from '../../../../../../shared/ai-vault/contracts
 import { getExecutionHostIdForWorktree } from '@/lib/workspace/ownership/worktree-runtime-owner'
 import type { AppState } from '@/store/types'
 import { readRecordChanges } from '@/store/record-transitions/keyed-record-change-reads'
+import { keyedListsMatch } from '@/store/record-transitions/keyed-list-match'
 import { collectAiVaultTitleRequests } from './ai-vault-tab-title-requests'
 import { sessionNameSlotEqual } from '../../../../../../shared/session-names/session-name-slot'
 import { placedPanesEqual, titleRelevant } from './ai-vault-tab-title-placement-inputs'
@@ -110,45 +111,25 @@ function terminalTabsEqual(
   previous: AiVaultTitleRequestInputs,
   includeStoredTitles: boolean
 ): boolean {
-  const currentKeys = Object.keys(current.tabsByWorktree)
-  const previousKeys = Object.keys(previous.tabsByWorktree)
-  if (currentKeys.length !== previousKeys.length) {
-    return false
-  }
-  for (const worktreeId of currentKeys) {
-    const currentTabs = current.tabsByWorktree[worktreeId]
-    const previousTabs = previous.tabsByWorktree[worktreeId]
-    if (!previousTabs || currentTabs.length !== previousTabs.length) {
-      return false
-    }
-    for (let index = 0; index < currentTabs.length; index++) {
-      const left = currentTabs[index]
-      const right = previousTabs[index]
-      if (
-        left.id !== right.id ||
-        left.worktreeId !== right.worktreeId ||
-        left.sessionTitleFromHost !== right.sessionTitleFromHost ||
-        left.ptyId !== right.ptyId ||
-        (left.generation ?? 0) !== (right.generation ?? 0) ||
-        (includeStoredTitles && !sessionNameSlotEqual(left.aiVaultTitle, right.aiVaultTitle))
-      ) {
-        return false
-      }
-    }
-  }
-  return true
+  return keyedListsMatch(
+    current.tabsByWorktree,
+    previous.tabsByWorktree,
+    (left, right) =>
+      left.id === right.id &&
+      left.worktreeId === right.worktreeId &&
+      left.sessionTitleFromHost === right.sessionTitleFromHost &&
+      left.ptyId === right.ptyId &&
+      (left.generation ?? 0) === (right.generation ?? 0) &&
+      (!includeStoredTitles || sessionNameSlotEqual(left.aiVaultTitle, right.aiVaultTitle)),
+    'any'
+  )
 }
 
 function activePanesEqual(
   current: AiVaultTitleRequestInputs,
   previous: AiVaultTitleRequestInputs
 ): boolean {
-  const currentKeys = Object.keys(current.terminalLayoutsByTabId)
-  const previousKeys = Object.keys(previous.terminalLayoutsByTabId)
-  if (currentKeys.length !== previousKeys.length) {
-    return false
-  }
-  return currentKeys.every((tabId) => {
+  const paneEqual = (tabId: string): boolean => {
     const currentLayout = current.terminalLayoutsByTabId[tabId]
     const previousLayout = previous.terminalLayoutsByTabId[tabId]
     // A pane's PTY binds its session name, so split-ness and leaf PTY ownership are request facts too.
@@ -157,7 +138,19 @@ function activePanesEqual(
       (currentLayout?.root?.type === 'split') === (previousLayout?.root?.type === 'split') &&
       leafPtyIdsEqual(currentLayout?.ptyIdsByLeafId, previousLayout?.ptyIdsByLeafId)
     )
-  })
+  }
+  const changes = readRecordChanges(current.terminalLayoutsByTabId, previous.terminalLayoutsByTabId)
+  if (changes?.kind === 'addressed') {
+    return (
+      changes.added.length === 0 && changes.deleted.size === 0 && [...changes.keys].every(paneEqual)
+    )
+  }
+  const currentKeys = Object.keys(current.terminalLayoutsByTabId)
+  const previousKeys = Object.keys(previous.terminalLayoutsByTabId)
+  if (currentKeys.length !== previousKeys.length) {
+    return false
+  }
+  return currentKeys.every(paneEqual)
 }
 
 function leafPtyIdsEqual(

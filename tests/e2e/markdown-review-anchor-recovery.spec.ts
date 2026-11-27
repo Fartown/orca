@@ -7,11 +7,11 @@ import { test } from './desktop/electron-fixtures/orca-app'
 import {
   getActiveWorktreeContext,
   openMarkdownFixture
-} from './editor/markdown/markdown-editor-fixture'
-import { launchHeadlessPairedRuntimeHost } from './remote/paired-runtime/client-hosts/headless-paired-runtime-host'
+} from './fork-fixtures/editor/markdown/markdown-editor-fixture'
+import { launchHeadlessPairedRuntimeHost } from './fork-fixtures/remote/paired-runtime/client-hosts/headless-paired-runtime-host'
 import { launchPairedElectronClient } from './remote/paired-runtime/client-hosts/paired-electron-client'
-import { waitForPairedClientWorktree } from './remote/paired-runtime/client-hosts/paired-client-host-session'
-import { reserveLocalPort } from './remote/managed-ssh/host-lifecycle/reserve-local-port'
+import { waitForPairedClientWorktree } from './fork-fixtures/remote/paired-runtime/client-hosts/paired-client-host-session'
+import { reserveLocalPort } from './fork-fixtures/remote/managed-ssh/host-lifecycle/reserve-local-port'
 import {
   decodePairingOffer,
   encodePairingOffer

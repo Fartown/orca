@@ -6,7 +6,7 @@ import { MarkdownPreviewBody } from '@/components/editor/markdown-preview/render
 import { MarkdownTableOfContentsPanel } from '@/components/editor/markdown/navigation/MarkdownTableOfContentsPanel'
 import { scrollToAnchorInEditor } from '@/components/editor/markdown/navigation/markdown-anchor-scroll'
 import {
-  decodeMarkdownPreviewAnchor,
+  findMarkdownPreviewAnchorElement,
   getMarkdownPreviewAnchorScrollTop
 } from '@/components/editor/markdown-preview/viewport/markdown-preview-anchor-navigation'
 import { revealMarkdownNavigationDetails } from '@/components/editor/markdown/navigation/markdown-navigation-details'
@@ -88,10 +88,6 @@ function readLocationAnchor(): string {
   return window.location.hash.slice(1)
 }
 
-// Why the prefix: sanitizing clobbers footnote ids a second time, so `#user-content-fn-1` lands on
-// `user-content-user-content-fn-1`.
-const SANITIZED_ID_PREFIX = 'user-content-'
-
 /** Same landing as the app's preview anchors; headings also resolve by slug, as in its TOC. */
 function scrollToShareAnchor(
   scroller: HTMLElement | null,
@@ -101,10 +97,7 @@ function scrollToShareAnchor(
   if (!scroller || !body || !raw) {
     return
   }
-  const anchor = decodeMarkdownPreviewAnchor(raw)
-  const target = [...body.querySelectorAll<HTMLElement>('[id]')].find(
-    (element) => element.id === anchor || element.id === `${SANITIZED_ID_PREFIX}${anchor}`
-  )
+  const target = findMarkdownPreviewAnchorElement(body, raw)
   if (!target) {
     scrollToAnchorInEditor(body, raw)
     return

@@ -1,8 +1,5 @@
-import { OrcaRuntimeWithResubmitHeldAgentPrompt } from '../runtime/terminal/input/terminal-agent-prompt-resubmit'
-import type {
-  AgentPromptExpectedBinding,
-  RuntimeAgentPromptWriteOptions
-} from '../runtime/terminal/input/agent-prompt-write-options'
+import { OrcaRuntimeWithAgentPromptWriteGuards } from '../runtime/terminal/input/terminal-agent-prompt-guards'
+import type { RuntimeAgentPromptWriteOptions } from '../runtime/terminal/input/agent-prompt-write-options'
 import type { AgentPromptActivity } from '../runtime/terminal/input/agent-prompt-submission-verification'
 import { assertTerminalInputAdmitted } from '../runtime/terminal/input/terminal-input-admission'
 import { waitForAgentPromptDelay } from '../runtime/terminal/input/agent-prompt-signals'
@@ -13,24 +10,20 @@ import {
 } from './durable-chat-transcript-boundary'
 import { restoredTerminalAuthorityMatches } from './restored-terminal-authority'
 import { writeDurableChatComposerPrefix } from './durable-chat-composer-input'
+import { durableChatSend } from './durable-chat-send-options'
 
-export abstract class OrcaRuntimeWithDurableChatPrompt extends OrcaRuntimeWithResubmitHeldAgentPrompt {
-  protected assertAgentPromptExpectedBinding(
-    handle: string,
-    expected: AgentPromptExpectedBinding | undefined
+export abstract class OrcaRuntimeWithDurableChatPrompt extends OrcaRuntimeWithAgentPromptWriteGuards {
+  /** terminal.send reaches its durable chat branch through the runtime it already holds, which costs that method no import line. */
+  assertDurableChatSend(
+    params: { chatComposer?: RuntimeAgentPromptWriteOptions['chatComposer'] },
+    requestReceipt: unknown,
+    usesAgentPrompt: boolean
   ): void {
-    if (!expected) {
-      return
-    }
-    const current = this.getTerminalPromptRequestBinding(handle)
-    if (
-      current.ptyId !== expected.ptyId ||
-      current.processIncarnation !== expected.processIncarnation
-    ) {
-      throw new Error('terminal_handle_stale')
-    }
+    durableChatSend.assert(params.chatComposer, !!requestReceipt, usesAgentPrompt)
   }
-
+  durableChatPromptOptions(chatComposer: RuntimeAgentPromptWriteOptions['chatComposer']) {
+    return durableChatSend.promptOptions(chatComposer)
+  }
   protected assertDurableChatSession(
     handle: string,
     options: RuntimeAgentPromptWriteOptions
@@ -116,13 +109,16 @@ export abstract class OrcaRuntimeWithDurableChatPrompt extends OrcaRuntimeWithRe
     handle: string,
     ptyId: string,
     options: RuntimeAgentPromptWriteOptions,
-    beforeWrite: (signal: AbortSignal) => Promise<void>,
-    deliverySignal: AbortSignal,
-    permissionBaseline: AgentPromptActivity
+    write: {
+      permissionBaseline: AgentPromptActivity
+      signal: AbortSignal
+      beforeWrite: (signal: AbortSignal) => Promise<void>
+    }
   ): Promise<void> {
     if (!options.chatComposer) {
       return
     }
+    const { permissionBaseline, signal: deliverySignal, beforeWrite } = write
     if (this.getPtyAgent(ptyId) !== 'codex') {
       throw new Error('terminal_handle_stale')
     }

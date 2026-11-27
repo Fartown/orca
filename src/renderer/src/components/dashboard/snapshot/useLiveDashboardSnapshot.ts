@@ -21,11 +21,13 @@ export function useLiveDashboardSnapshot(): DashboardSnapshot {
   const worktreesByRepo = useAppStore((s) => selectWorktreesByRepo(s))
   const tabsByWorktree = useAppStore((s) => s.tabsByWorktree)
   const unifiedTabsByWorktree = useAppStore((s) => s.unifiedTabsByWorktree)
-  const agentStatusByPaneKey = useAppStore((s) => s.agentStatusByPaneKey)
+  const statusProjection = useAppStore((s) => s.agentStatusByPaneKey.projection)
+  const statusCursor = useAppStore((s) => s.agentStatusByPaneKey.projection.changeCursor())
   const migrationUnsupportedByPtyId = useAppStore((s) => s.migrationUnsupportedByPtyId)
   const runtimeAgentOrchestrationByPaneKey = useAppStore(
     (s) => s.runtimeAgentOrchestrationByPaneKey
   )
+  const remoteAgentOrchestrationByHost = useAppStore((s) => s.remoteAgentOrchestrationByHost)
   const terminalLayoutsByTabId = useAppStore((s) => s.terminalLayoutsByTabId)
   const ptyIdsByTabId = useAppStore((s) => s.ptyIdsByTabId)
   const runtimePaneTitlesByTabId = useAppStore((s) => s.runtimePaneTitlesByTabId)
@@ -77,9 +79,10 @@ export function useLiveDashboardSnapshot(): DashboardSnapshot {
           worktreesByRepo,
           tabsByWorktree,
           unifiedTabsByWorktree,
-          agentStatusByPaneKey,
+          agentStatusByPaneKey: useAppStore.getState().agentStatusByPaneKey,
           migrationUnsupportedByPtyId,
           runtimeAgentOrchestrationByPaneKey,
+          remoteAgentOrchestrationByHost,
           terminalLayoutsByTabId,
           ptyIdsByTabId,
           runtimePaneTitlesByTabId,
@@ -112,9 +115,11 @@ export function useLiveDashboardSnapshot(): DashboardSnapshot {
       worktreesByRepo,
       tabsByWorktree,
       unifiedTabsByWorktree,
-      agentStatusByPaneKey,
+      statusProjection,
+      statusCursor,
       migrationUnsupportedByPtyId,
       runtimeAgentOrchestrationByPaneKey,
+      remoteAgentOrchestrationByHost,
       terminalLayoutsByTabId,
       ptyIdsByTabId,
       runtimePaneTitlesByTabId,

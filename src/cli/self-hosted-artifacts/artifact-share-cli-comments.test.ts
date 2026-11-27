@@ -10,7 +10,8 @@ const { callMock, runtimeClientConstructorMock, serveOrcaAppMock, getDefaultUser
   }))
 
 vi.mock('../runtime/client', async () => {
-  const { createRuntimeClientModuleMock } = await import('../index-test-harness.js')
+  const { createRuntimeClientModuleMock } =
+    await import('../../fork-test-support/cli/index-test-harness.js')
   return createRuntimeClientModuleMock({
     callMock,
     runtimeClientConstructorMock,
@@ -30,7 +31,7 @@ vi.mock('../runtime/profile/metadata', async (importOriginal) => ({
 }))
 
 import { main } from '../index'
-import { okFixture } from '../runtime/fixtures/runtime-rpc-fixtures'
+import { okFixture } from '../../fork-test-support/cli/runtime/fixtures/runtime-rpc-fixtures'
 
 const HOST = { executionHostId: 'local', label: 'mbp5' }
 const ID_A = 'Qx3vR0pL8sTy2KmA'
@@ -38,6 +39,8 @@ const ID_B = 'Zz9vR0pL8sTy2KmB'
 
 beforeEach(() => {
   callMock.mockReset()
+  // Shared-worker files run without isolation, so an earlier file's exit code is still set.
+  process.exitCode = 0
   vi.spyOn(console, 'log').mockImplementation(() => undefined)
   vi.spyOn(console, 'error').mockImplementation(() => undefined)
   vi.stubEnv('ORCA_WORKSPACE_ID', '')
@@ -49,6 +52,23 @@ afterEach(() => {
   vi.unstubAllEnvs()
   vi.restoreAllMocks()
   process.exitCode = 0
+})
+
+describe('orca artifacts runtime routing', () => {
+  it('uses the desktop runtime despite remote-selection environment fallbacks', async () => {
+    vi.stubEnv('ORCA_ENVIRONMENT', 'remote-environment')
+    vi.stubEnv('ORCA_PAIRING_CODE', 'remote-pairing-code')
+    callMock.mockResolvedValue(
+      okFixture('artifact-list', { status: 'ok', value: { artifacts: [] } })
+    )
+    runtimeClientConstructorMock.mockClear()
+
+    await main(['artifacts', 'list', '--json'], '/folder-workspace')
+
+    expect(process.exitCode).not.toBe(1)
+    expect(runtimeClientConstructorMock).toHaveBeenCalledWith(null, null)
+    expect(callMock).toHaveBeenCalledWith('artifactShare.list', {})
+  })
 })
 
 describe('orca artifacts comments', () => {

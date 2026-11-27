@@ -1,6 +1,6 @@
 import '../runtime/rpc/dispatch/testing/unused-default-rpc-methods.test-fixture'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createAgentPromptSubmissionRuntime } from '../runtime/terminal/input/agent-prompt-submission-runtime-test-fixture'
+import { createAgentPromptSubmissionRuntime } from '../../fork-test-support/main/runtime/terminal/input/agent-prompt-submission-runtime-test-fixture'
 import { OrchestrationDb } from '../runtime/orchestration/db/orchestration-db'
 import { RpcDispatcher } from '../runtime/rpc/dispatcher'
 import { TERMINAL_METHODS } from '../runtime/rpc/methods/terminal/terminal'

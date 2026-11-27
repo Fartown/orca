@@ -41,12 +41,12 @@ export function resolveHostTerminalTabWithCachedTitle(
 }
 
 export function resolveHostAgentRowConversationName(args: {
-  tabId: string | undefined
-  worktreeId: string | undefined
+  tabId?: string
+  worktreeId?: string
   paneKey: string
-  ptyId: string | null | undefined
+  ptyId?: string | null
   agentType: AgentType | null
-  providerSessionId: string | undefined
+  providerSessionId?: string
   baseOptions: { providerSessionId: string | undefined }
   generatedTitlesEnabled: boolean
   mintIdentityFallback?: boolean

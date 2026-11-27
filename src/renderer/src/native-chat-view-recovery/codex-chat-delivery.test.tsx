@@ -6,8 +6,6 @@ import {
   NATIVE_CHAT_UNCONFIRMED_SEND_HOLD_MS,
   useNativeChatPendingDelivery
 } from '../components/native-chat/session/terminal/delivery/use-native-chat-pending-delivery'
-import { clearPendingSendCacheForTests } from '../components/native-chat/session/terminal/delivery/native-chat-pending'
-import { resetNativeChatPtySendQueuesForTests } from '../components/native-chat/session/terminal/send/native-chat-pty-send-queue'
 import type { NativeChatMessage } from '../../../shared/native-chat/native-chat-types'
 import { AGENT_TUI_CLEAR_INPUT_MAX } from '../../../shared/agent-launch/startup/agent-tui-input-clear'
 
@@ -37,19 +35,23 @@ const message = 'delivery probe'
 // An unreadable input line is cleared by its own acknowledged write before the body.
 const clearCall = (ptyId: string) => [ptyId, AGENT_TUI_CLEAR_INPUT_MAX, 'driving']
 const noMessages: NativeChatMessage[] = []
+// The pending-echo cache and the per-PTY send queue are module state, so each case owns its pane and PTY.
+let caseNumber = 0
+const ownPty = (ptyId: string) => `${ptyId}-${caseNumber}`
 
 function renderSend(ptyId: string, agent: 'codex' | 'claude' = 'codex', imagePaths: string[] = []) {
+  const paneKey = `tab-${caseNumber}:leaf`
   return renderHook(
     ({ messages }) => {
       const delivery = useNativeChatPendingDelivery({
-        paneKey: 'tab:leaf',
+        paneKey,
         agent,
         session: { messages, readPhase: 'ready', sessionId: 'session-1' }
       })
       const send = useNativeChatPtyComposerSend({
         agent,
         draft: message,
-        draftScopeKey: 'tab:leaf',
+        draftScopeKey: paneKey,
         imageAttachments: imagePaths.map((path) => ({ path })),
         disabled: false,
         isDispatchingSessionOption: false,
@@ -74,33 +76,33 @@ function renderSend(ptyId: string, agent: 'codex' | 'claude' = 'codex', imagePat
 }
 
 beforeEach(() => {
+  caseNumber += 1
   vi.useFakeTimers()
   vi.clearAllMocks()
-  clearPendingSendCacheForTests()
-  resetNativeChatPtySendQueuesForTests()
   writes.verified.mockResolvedValue(true)
 })
 
 afterEach(() => {
   cleanup()
-  resetNativeChatPtySendQueuesForTests()
   vi.useRealTimers()
 })
 
 describe('Codex terminal chat delivery truth', () => {
   it('preserves the existing Claude acknowledgment policy', async () => {
-    const { result } = renderSend('local@@pty', 'claude')
+    const ptyId = ownPty('local@@pty')
+    const { result } = renderSend(ptyId, 'claude')
     await act(async () => result.current.send())
     await act(() => vi.advanceTimersByTimeAsync(140))
     expect(writes.verified.mock.calls).toEqual([
-      clearCall('local@@pty'),
-      ['local@@pty', message, 'driving', undefined]
+      clearCall(ptyId),
+      [ptyId, message, 'driving', undefined]
     ])
   })
 
   it.each(['local@@pty', 'ssh:host@@pty', 'remote:host@@terminal'])(
     'keeps a refused message with a failure notice, without sending Enter: %s',
-    async (ptyId) => {
+    async (host) => {
+      const ptyId = ownPty(host)
       writes.verified.mockResolvedValueOnce(true).mockResolvedValueOnce(false)
       const { result } = renderSend(ptyId)
       await act(async () => result.current.send())
@@ -122,7 +124,7 @@ describe('Codex terminal chat delivery truth', () => {
   it('waits for body acceptance before scheduling Enter', async () => {
     const body = Promise.withResolvers<boolean>()
     writes.verified.mockResolvedValueOnce(true).mockReturnValueOnce(body.promise)
-    const { result } = renderSend('remote:host@@terminal')
+    const { result } = renderSend(ownPty('remote:host@@terminal'))
     act(() => result.current.send())
     await act(() => vi.advanceTimersByTimeAsync(1000))
     expect(writes.verified.mock.calls.map((call) => call[1])).toEqual([
@@ -139,7 +141,9 @@ describe('Codex terminal chat delivery truth', () => {
 
   it('keeps image attachments with a refused image write and does not submit', async () => {
     writes.verified.mockResolvedValueOnce(true).mockResolvedValueOnce(false)
-    const { result } = renderSend('remote:host@@terminal', 'codex', ['/tmp/delivery-fixture.png'])
+    const { result } = renderSend(ownPty('remote:host@@terminal'), 'codex', [
+      '/tmp/delivery-fixture.png'
+    ])
     await act(async () => result.current.send())
     await act(() => vi.advanceTimersByTimeAsync(1000))
     expect(writes.verified).toHaveBeenCalledTimes(2)
@@ -153,7 +157,7 @@ describe('Codex terminal chat delivery truth', () => {
 
   it('flags a lost acknowledgment without replaying the body', async () => {
     writes.verified.mockResolvedValueOnce(true).mockRejectedValueOnce(new Error('reply lost'))
-    const { result } = renderSend('remote:host@@terminal')
+    const { result } = renderSend(ownPty('remote:host@@terminal'))
     await act(async () => result.current.send())
     await act(() => vi.advanceTimersByTimeAsync(140))
     await act(() => vi.advanceTimersByTimeAsync(NATIVE_CHAT_UNCONFIRMED_SEND_HOLD_MS))
@@ -165,7 +169,7 @@ describe('Codex terminal chat delivery truth', () => {
   })
 
   it('reconciles a successful send against its provider transcript', async () => {
-    const { result, rerender } = renderSend('local@@pty')
+    const { result, rerender } = renderSend(ownPty('local@@pty'))
     await act(async () => result.current.send())
     await act(() => vi.advanceTimersByTimeAsync(1000))
     expect(writes.verified.mock.calls.map((call) => call[1])).toEqual([

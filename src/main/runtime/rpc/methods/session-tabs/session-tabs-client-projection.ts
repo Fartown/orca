@@ -1,13 +1,17 @@
 import type { RuntimeMobileSessionTabsResult } from '../../../../../shared/remote-runtime/session-graph/runtime-session-contracts'
 import { applyHeadlessMobileSessionTabTitles } from '../../../../session-names/headless-mobile-tab-session-title'
 import { projectSessionTabAgentStatus } from './session-tab-agent-status-projection'
-import { projectSessionTabBrowserPlacements } from './session-tab-browser-placement-projection'
+import {
+  projectSessionTabBrowserPlacements,
+  type ClientHostedPageHosts
+} from './session-tab-browser-placement-projection'
 import { projectSessionTabFileHosts } from './session-tab-file-host-projection'
 
 export function projectSessionTabsForClient(
   snapshot: RuntimeMobileSessionTabsResult,
   clientKind: 'mobile' | 'runtime' | undefined,
-  clientCapabilities: Parameters<typeof projectSessionTabAgentStatus>[2]
+  clientCapabilities: Parameters<typeof projectSessionTabAgentStatus>[2],
+  hosts: ClientHostedPageHosts
 ): RuntimeMobileSessionTabsResult {
   // Phones draw no agent message cards, so they never pay for sender identity.
   const { agentSenderAssociations: _desktopOnly, ...phone } = snapshot
@@ -21,7 +25,8 @@ export function projectSessionTabsForClient(
         ),
         clientKind
       ),
-      clientCapabilities
+      clientCapabilities,
+      hosts
     ),
     clientKind
   )
@@ -32,9 +37,10 @@ export function projectSessionTabsForClient(
 export function projectSessionTabsForInventoryStream(
   snapshot: RuntimeMobileSessionTabsResult,
   clientKind: 'mobile' | 'runtime' | undefined,
-  clientCapabilities: Parameters<typeof projectSessionTabAgentStatus>[2]
+  clientCapabilities: Parameters<typeof projectSessionTabAgentStatus>[2],
+  hosts: ClientHostedPageHosts
 ): RuntimeMobileSessionTabsResult {
-  const projected = projectSessionTabsForClient(snapshot, clientKind, clientCapabilities)
+  const projected = projectSessionTabsForClient(snapshot, clientKind, clientCapabilities, hosts)
   if (
     clientKind === 'mobile' ||
     !projected.tabs.some((tab) => tab.type === 'agent-session' && tab.chatStatus)

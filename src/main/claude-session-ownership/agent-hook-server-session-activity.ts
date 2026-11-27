@@ -10,9 +10,10 @@ export abstract class AgentHookServerSessionActivity extends AgentHookServerStat
   protected commitAcceptedStatusRow(
     before: EnrichedAgentHookEventPayload | undefined,
     accepted: EnrichedAgentHookEventPayload,
-    incoming: IncomingAgentHookEvent
+    incoming: IncomingAgentHookEvent,
+    fromAgentHook: boolean
   ): void {
-    this.commitStatusRowMutation(before, accepted)
+    this.commitAppliedStatusRow(before, accepted, fromAgentHook)
     // Independent of the row-store bookkeeping above; the sender's own process proves ownership.
     recordClaudeSessionActivity(this.state, accepted, accepted.isReplay, incoming)
   }

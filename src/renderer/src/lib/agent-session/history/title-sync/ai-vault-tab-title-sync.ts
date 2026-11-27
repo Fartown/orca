@@ -30,6 +30,7 @@ import {
   aiVaultTitleRequestKey,
   changedPaneTitleRequests,
   changedTitleRefreshHosts,
+  isClaudeHarnessTitle,
   storedAiVaultTitles,
   titleRefreshInterval,
   supportsSessionTitleRefresh
@@ -105,18 +106,19 @@ export function startAiVaultTabTitleSync(dependencies: SyncDependencies): () => 
     return snapshot
   }
 
+  const whileWriting = (write: () => void): void => {
+    writing = true
+    try {
+      write()
+    } finally {
+      writing = false
+    }
+  }
   const names = createSessionNameTabTitleProjection({
     dependencies,
     currentRequests: (state) => currentRequests(state).requests,
     rereadKeys: dirty,
-    whileWriting: (write) => {
-      writing = true
-      try {
-        write()
-      } finally {
-        writing = false
-      }
-    }
+    whileWriting
   })
 
   const resolveBatch = async (requests: BoundSessionNameRequest[]): Promise<void> => {
@@ -135,7 +137,9 @@ export function startAiVaultTabTitleSync(dependencies: SyncDependencies): () => 
       return
     }
     const currentByTabId = currentRequests().byTabId
-    names.writeResolved(requests, result, (request) => {
+    // Older hosts still name Claude sessions with harness markup such as /clear's command caveat.
+    const titles = result.titles.filter((title) => !isClaudeHarnessTitle(title))
+    names.writeResolved(requests, { ...result, titles }, (request) => {
       const current = currentByTabId.get(request.tabId)
       return !!current && aiVaultTitleRequestKey(current) === aiVaultTitleRequestKey(request)
     })
@@ -179,9 +183,16 @@ export function startAiVaultTabTitleSync(dependencies: SyncDependencies): () => 
       const identityMatches =
         stored?.agent === request.agent && stored.sessionId === request.providerSession.id
       const last = lastSettledAttemptAt.get(aiVaultTitleRequestKey(request))
+      // Drop a harness-markup title saved from an older host once, and re-ask.
+      const savedHarnessTitle =
+        identityMatches && last === undefined && isClaudeHarnessTitle(stored)
+      if (savedHarnessTitle) {
+        whileWriting(() => dependencies.getState().setAiVaultTabTitle(request.tabId, null))
+      }
       return (
         nameCacheChanged ||
         !identityMatches ||
+        savedHarnessTitle ||
         !stored?.title.trim() ||
         (firstReconcile && !stored.providerName) ||
         (request.refresh && last === undefined) ||

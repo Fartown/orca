@@ -35,6 +35,7 @@ import {
   withoutPendingHandle
 } from '../../../session/tabs/pending-session-selection'
 import { releaseTerminalCreateLock } from './terminal-create-lock'
+import { hostViewModeForNewAgentTab } from '../../../storage/session-view-preferences'
 import { placeCreatedSessionTab } from '../../../../../src/shared/workspace-layout/tab-groups/session-tab-placement'
 import '../../../../../src/shared/remote-runtime/protocol/protocol-version'
 import { SESSION_TABS_SPLIT_GROUP_PLACEMENT_RUNTIME_CAPABILITY } from '../../../../../src/shared/remote-runtime/protocol/session-tabs-runtime-capabilities'
@@ -162,7 +163,9 @@ export function useMobileSessionTerminalCreateActions(scope: MobileSessionAttach
         agent,
         options,
         shell: options?.shell,
-        ...(sourceFork ? { sourceChatFork: { sessionId: sourceFork.sessionId } } : {})
+        ...(sourceFork ? { sourceChatFork: { sessionId: sourceFork.sessionId } } : {}),
+        viewMode:
+          sourceFork || options?.terminalView ? undefined : await hostViewModeForNewAgentTab(agent)
       })
       if (!isCurrent()) {
         return sourceOutcome('accepted')
@@ -206,9 +209,9 @@ export function useMobileSessionTerminalCreateActions(scope: MobileSessionAttach
           })
         })
       }
+      options?.onCreateResult?.(created.terminal)
       if (typeof created.terminal === 'string') {
         const createdHandle = created.terminal
-        options?.onCreateResult?.({ kind: 'terminal', handle: createdHandle })
         // Protect the new active handle until host snapshots catch up or the pane can blank.
         pendingSelectionRef.current = { kind: 'terminal', handle: createdHandle, tabId: created.id }
         activeHandleRef.current = createdHandle
@@ -274,7 +277,6 @@ export function useMobileSessionTerminalCreateActions(scope: MobileSessionAttach
           showToast(options.successToast)
         }
       } else {
-        options?.onCreateResult?.({ kind: 'terminal-without-handle' })
         // Clear old pending handles when create returns none so WebView-ready cannot subscribe stale state.
         pendingSelectionRef.current = withoutPendingHandle(pendingSelectionRef.current)
         activeHandleRef.current = null

@@ -64,14 +64,8 @@ import { installFatalSignalListenerGuard } from './crash-reporting/fatal-signal-
 import { installStdioWriteErrorSink } from './startup/process-failure/main-process-error-guards'
 import { installWorkerThreadDiagnostics } from './worker-threads/worker-thread-diagnostics'
 
-import {
-  startGoalFeatureForMainProcess,
-  stopGoalFeatureForMainProcess
-} from './startup/main-process-goals'
-import {
-  startLocalTasksForMainProcess,
-  stopLocalTasksForMainProcess
-} from './startup/main-process-local-tasks'
+import { stopGoalFeatureForMainProcess } from './startup/main-process-goals'
+import { stopLocalTasksForMainProcess } from './startup/main-process-local-tasks'
 
 // Before anything spawns, so no daemon, PTY or agent inherits it outside e2e.
 dropE2eSpawnLogOutsideE2e()
@@ -228,11 +222,7 @@ if (preflightReady) {
       await wslHostsGateReady
       await initializeMainProcessReady({
         openMainWindow,
-        handleMacAppActivation,
-        afterTerminalRuntimeStartup: async () => {
-          startLocalTasksForMainProcess()
-          await startGoalFeatureForMainProcess()
-        }
+        handleMacAppActivation
       })
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error)

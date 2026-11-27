@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  _resetTerminalPaneRecoveryForTests,
   registerTerminalPaneRecoveryInstance,
   requestTerminalPaneRecovery
 } from '../components/terminal-pane/render-health/recovery/terminal-pane-recovery'
@@ -24,7 +23,6 @@ vi.mock('@/diagnostics/crash-reporting/crash-breadcrumb-recorder', () => ({
 const releases: (() => void)[] = []
 
 beforeEach(() => {
-  _resetTerminalPaneRecoveryForTests()
   resetRecoveryLedgerStore()
   setTerminalTabs([{ id: 'tab-1', viewMode: 'chat' }])
   mocks.getTab.mockReturnValue({ viewMode: 'chat' })
@@ -34,7 +32,6 @@ beforeEach(() => {
 
 afterEach(() => {
   releases.splice(0).forEach((release) => release())
-  _resetTerminalPaneRecoveryForTests()
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
 })

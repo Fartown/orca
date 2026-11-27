@@ -2,8 +2,8 @@
 import { act, cleanup, render, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import type {
-  AgentListPublication,
-  AgentListVerdict
+  AgentListVerdict,
+  AgentListVerdictUpdate
 } from '../../../shared/agent-status/presentation/agent-list-status'
 import type {
   AiVaultSessionTitlesArgs,
@@ -34,7 +34,7 @@ const localRequest = {
   agent: 'claude' as const,
   sessionId: 'S1'
 }
-const publishListVerdicts = vi.fn<(publication: AgentListPublication | null) => void>()
+const publishListVerdicts = vi.fn<(update: AgentListVerdictUpdate | null) => void>()
 const resolve = vi.fn(
   async (args: AiVaultSessionTitlesArgs): Promise<AiVaultSessionTitlesResult> => ({
     titles: args.requests.map((item) => ({
@@ -52,10 +52,20 @@ const resolve = vi.fn(
 
 function latestPublishedTitle(paneKey = PANE_KEY): string | undefined {
   for (let i = publishListVerdicts.mock.calls.length - 1; i >= 0; i -= 1) {
-    const publication = publishListVerdicts.mock.calls[i]?.[0]
-    const verdict: AgentListVerdict | undefined = publication?.verdicts[paneKey]
-    if (verdict?.listed) {
-      return verdict.title
+    const update = publishListVerdicts.mock.calls[i]?.[0]
+    if (!update) {
+      continue
+    }
+    if (update.kind === 'changes' && update.removed.includes(paneKey)) {
+      return undefined
+    }
+    const verdict: AgentListVerdict | undefined =
+      update.kind === 'reset' ? update.publication.verdicts[paneKey] : update.changed[paneKey]
+    if (verdict) {
+      return verdict.listed ? verdict.title : undefined
+    }
+    if (update.kind === 'reset') {
+      return undefined
     }
   }
   return undefined
@@ -125,6 +135,18 @@ it('publishes the confirmed Provider name instead of a raw follow-up prompt', as
   render(<AgentListVerdictPublisher />)
   await waitFor(() => expect(latestPublishedTitle()).toBe(nativeName))
   expect(readPublishedAgentPaneThreads()?.[0]?.paneTitle).toBe(nativeName)
+})
+
+it('publishes names resolved before the persisted UI became ready', async () => {
+  await sessionNameStore.read([localRequest], true)
+  useAppStore.setState({ persistedUIReady: false })
+  render(<AgentListVerdictPublisher />)
+  expect(publishListVerdicts).not.toHaveBeenCalled()
+  await act(async () => {
+    useAppStore.setState({ persistedUIReady: true })
+  })
+  await waitFor(() => expect(latestPublishedTitle()).toBe('Provider 原生名'))
+  expect(readPublishedAgentPaneThreads()?.[0]?.paneTitle).toBe('Provider 原生名')
 })
 
 it('publishes a single-pane manual tab rename ahead of the Provider name', async () => {

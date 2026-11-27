@@ -1,12 +1,12 @@
 import { expect, it, vi } from 'vitest'
-import '../runtime/construction/test-context/orca-runtime-test-lifecycle.spec'
-import '../runtime/construction/test-context/runtime-test-module-registration.spec'
+import '../../fork-test-support/main/runtime/construction/test-context/orca-runtime-test-lifecycle.spec'
+import '../../fork-test-support/main/runtime/construction/test-context/runtime-test-module-registration.spec'
 import { OrcaRuntimeService } from '../runtime/orca-runtime'
-import { electronMocks } from '../runtime/orca-runtime-test-mocks/setup.spec'
+import { electronMocks } from '../../fork-test-support/main/runtime/orca-runtime-test-mocks/setup.spec'
 import {
   TEST_WORKTREE_ID,
   store
-} from '../runtime/construction/test-context/orca-runtime-test-fixtures.spec'
+} from '../../fork-test-support/main/runtime/construction/test-context/orca-runtime-test-fixtures.spec'
 
 it.each(['background', 'adopted', 'replaced'] as const)(
   'publishes only the created incarnation after reveal: %s',

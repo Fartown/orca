@@ -11,6 +11,8 @@ const projectNameGroupingCache = new WeakMap<
   WeakMap<ReadonlyMap<string, ProjectSectionRepo>, ProjectGroupingIndex | null>
 >()
 
+export const defaultGroupingRepos: ReadonlyMap<string, ProjectSectionRepo> = new Map()
+
 export function getProjectNameGroupingCache(model: ProjectSectionModel) {
   let cache = projectNameGroupingCache.get(model)
   if (!cache) {
@@ -47,15 +49,46 @@ export type SidebarProjectNameGroup = {
   repoIds: ReadonlySet<string>
 }
 
+type GetProjectGrouping = (
+  repoId: string,
+  repos: ReadonlyMap<string, Pick<ProjectSectionRepo, 'displayName'>>,
+  index: ProjectGroupingIndex
+) => { key: string; label: string }
+type IsProtectedCheckout = (setup: ProjectSectionSetup, index: ProjectGroupingIndex) => boolean
+
+/** Completes a grouping index with its name groups and caches it; the rules are the section module's own. */
+export function buildSidebarProjectNameGroupsIndex(
+  base: Omit<ProjectGroupingIndex, 'nameGroups'>,
+  model: ProjectSectionModel,
+  repos: ReadonlyMap<string, ProjectSectionRepo>,
+  [getGrouping, isProtected]: readonly [GetProjectGrouping, IsProtectedCheckout]
+): ProjectGroupingIndex {
+  // Why: grouping lookups are cached per index object, so the groups are built against the index that is returned.
+  const index: ProjectGroupingIndex = { ...base, nameGroups: new Map() }
+  index.nameGroups = buildSidebarProjectNameGroupsForSetups(
+    index,
+    repos,
+    getGrouping,
+    isProtected,
+    model.groupNamesByHost
+  )
+  getProjectNameGroupingCache(model).set(repos, index)
+  return index
+}
+
+export function toDisplayedProjectGrouping<T extends { key: string; label: string }>(
+  target: T,
+  index: ProjectGroupingIndex | null
+): T {
+  const group = index?.nameGroups.get(target.key)
+  return group ? { ...target, key: group.key, label: group.label } : target
+}
+
 export function buildSidebarProjectNameGroupsForSetups(
   index: ProjectGroupingIndex,
   repos: ReadonlyMap<string, Pick<ProjectSectionRepo, 'displayName' | 'projectGroupId'>>,
-  getGrouping: (
-    repoId: string,
-    repos: ReadonlyMap<string, Pick<ProjectSectionRepo, 'displayName'>>,
-    index: ProjectGroupingIndex
-  ) => { key: string; label: string },
-  isProtected: (setup: ProjectSectionSetup, index: ProjectGroupingIndex) => boolean,
+  getGrouping: GetProjectGrouping,
+  isProtected: IsProtectedCheckout,
   groupByHost = false
 ): ReadonlyMap<string, SidebarProjectNameGroup> {
   return buildSidebarProjectNameGroups(
@@ -134,4 +167,11 @@ export function mergeSidebarProjectNameSections<Item, R extends ProjectSectionRe
     })
   }
   return display
+}
+
+export function mergeOrderedSidebarProjectNameSections<Item, R extends ProjectSectionRepo>(
+  ordered: Iterable<readonly [string, ProjectSectionEntry<Item, R>]>,
+  index: ProjectGroupingIndex | null
+): [string, ProjectSectionEntry<Item, R>][] {
+  return [...mergeSidebarProjectNameSections(new Map(ordered), index?.nameGroups ?? new Map())]
 }

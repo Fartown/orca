@@ -3,7 +3,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { MobileNativeChatOverlay } from '../session/native-chat/MobileNativeChatOverlay'
 import type { MobileNativeChatController } from '../session/native-chat/mobile-native-chat-controller-contract'
-import { findByHostType } from '../test-support/react-test-renderer-host-nodes'
+import { findByHostType } from '../fork-test-support/test-support/react-test-renderer-host-nodes'
 import { MobileSessionFileAttachmentsScope } from './MobileSessionFileAttachmentsScope'
 import type { MobileFileAttachments } from './use-mobile-file-attachments'
 
@@ -42,6 +42,7 @@ function overlay(acceptsImages: boolean, attachImage: OverlayProps['images']['at
     nativeChatAgent: 'claude',
     nativeChatAcceptsImages: acceptsImages,
     nativeChatQueued: { cards: [], sessionKey: 'session-a' },
+    nativeChatWorkerApprovals: { open: [] },
     chatPending: [],
     chatImagePreviewsByMessageId: {}
   } as unknown as MobileNativeChatController

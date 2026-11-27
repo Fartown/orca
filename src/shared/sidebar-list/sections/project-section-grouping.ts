@@ -5,12 +5,7 @@ import type { ProjectOrderBy } from '../../ui-chrome/ui-chrome-types'
 import { toSshExecutionHostId } from '../../execution-host/execution-host'
 import type { Project, ProjectHostSetup } from '../../project/project-types'
 import type { Repo } from '../../repository/repo-types'
-import {
-  buildSidebarProjectNameGroupsForSetups,
-  getProjectNameGroupingCache,
-  mergeSidebarProjectNameSections,
-  type SidebarProjectNameGroup
-} from '../../sidebar-project-merge/sidebar-project-name-groups'
+import * as projectNameGroups from '../../sidebar-project-merge/sidebar-project-name-groups'
 import { parseWslUncPath } from '../../file-access/wsl-paths'
 import {
   isWindowsAbsolutePathLike,
@@ -43,7 +38,7 @@ export type ProjectGroupingIndex = {
   projectById: Map<string, ProjectSectionProject>
   setupByRepoId: Map<string, ProjectSectionSetup>
   surfaceKeysRequiringSetupGroups: Set<string>
-  nameGroups: ReadonlyMap<string, SidebarProjectNameGroup>
+  nameGroups: ReadonlyMap<string, projectNameGroups.SidebarProjectNameGroup>
 }
 
 /** The repo fields section grouping, labelling and ordering read. */
@@ -67,7 +62,7 @@ export type ProjectSectionEntry<Item, R extends ProjectSectionRepo = Repo> = {
   repoIds: Set<string>
 }
 
-const defaultGroupingRepos = new Map<string, ProjectSectionRepo>()
+const nameGroupRules = [getProjectGroupingForRepo, isCheckoutScopedProjectSetup] as const
 
 // Why: provisioned and folder setups are not independent Git checkouts.
 function isDistinctUserCheckout(setup: ProjectSectionSetup): boolean {
@@ -105,12 +100,12 @@ function getPathSurface(setup: ProjectSectionSetup): string {
 
 export function buildProjectGroupingIndex(
   model?: ProjectSectionModel,
-  repos: ReadonlyMap<string, ProjectSectionRepo> = defaultGroupingRepos
+  repos: ReadonlyMap<string, ProjectSectionRepo> = projectNameGroups.defaultGroupingRepos
 ): ProjectGroupingIndex | null {
   if (!model) {
     return null
   }
-  const cache = getProjectNameGroupingCache(model)
+  const cache = projectNameGroups.getProjectNameGroupingCache(model)
   const cached = cache.get(repos)
   if (cached !== undefined) {
     return cached
@@ -140,21 +135,12 @@ export function buildProjectGroupingIndex(
       surfaceKeysRequiringSetupGroups.add(surfaceKey)
     }
   }
-  const index: ProjectGroupingIndex = {
+  const index = {
     projectById: new Map(projects.map((project) => [project.id, project])),
     setupByRepoId: new Map(projectHostSetups.map((setup) => [setup.repoId, setup])),
-    surfaceKeysRequiringSetupGroups,
-    nameGroups: new Map()
+    surfaceKeysRequiringSetupGroups
   }
-  index.nameGroups = buildSidebarProjectNameGroupsForSetups(
-    index,
-    repos,
-    getProjectGroupingForRepo,
-    isCheckoutScopedProjectSetup,
-    model.groupNamesByHost
-  )
-  cache.set(repos, index)
-  return index
+  return projectNameGroups.buildSidebarProjectNameGroupsIndex(index, model, repos, nameGroupRules)
 }
 
 // Why: Settings splits projects by this same rule so it matches the sidebar headers.
@@ -175,37 +161,62 @@ export type ProjectHeaderRevealTarget<R extends Pick<ProjectSectionRepo, 'displa
   projectId?: string
 }
 
+const NULL_PROJECT_GROUPING_INDEX_KEY: object = {}
+const projectGroupingForRepoCache = new WeakMap<
+  ReadonlyMap<string, unknown>,
+  WeakMap<object, Map<string, ProjectHeaderRevealTarget<Pick<ProjectSectionRepo, 'displayName'>>>>
+>()
+
 export function getProjectGroupingForRepo<R extends Pick<ProjectSectionRepo, 'displayName'>>(
   repoId: string,
   repoMap: ReadonlyMap<string, R>,
   projectIndex: ProjectGroupingIndex | null
 ): ProjectHeaderRevealTarget<R> {
   const repo = repoMap.get(repoId)
+  const indexKey: object = projectIndex ?? NULL_PROJECT_GROUPING_INDEX_KEY
+  let byIndex = projectGroupingForRepoCache.get(repoMap)
+  let byRepoId = byIndex?.get(indexKey)
+  const cached = byRepoId?.get(repoId)
+  if (cached && cached.repo === repo) {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: cached under this exact repoMap whose values are R, and cached.repo === repo.
+    return cached as ProjectHeaderRevealTarget<R>
+  }
   const setup = projectIndex?.setupByRepoId.get(repoId)
   const project = setup ? projectIndex?.projectById.get(setup.projectId) : undefined
+  let result: ProjectHeaderRevealTarget<R>
   if (!setup || !project) {
-    return {
+    result = {
       key: `repo:${repoId}`,
       label: repo?.displayName ?? 'Unknown',
       repo
     }
-  }
-  if (projectIndex && isCheckoutScopedProjectSetup(setup, projectIndex)) {
+  } else if (projectIndex && isCheckoutScopedProjectSetup(setup, projectIndex)) {
     // Why: only the ambiguous surface needs checkout-specific headers.
-    return {
+    result = {
       key: `project:${project.id}::setup:${repoId}`,
       label: repo?.displayName ?? setup.displayName,
       repo,
       projectId: project.id
     }
+  } else {
+    // Provisioned copies and unambiguous checkouts share project identity rather than path-scoped setup identity.
+    result = {
+      key: `project:${project.id}`,
+      label: project.displayName,
+      repo,
+      projectId: project.id
+    }
   }
-  // Provisioned copies and unambiguous checkouts share project identity rather than path-scoped setup identity.
-  return {
-    key: `project:${project.id}`,
-    label: project.displayName,
-    repo,
-    projectId: project.id
+  if (!byIndex) {
+    byIndex = new WeakMap()
+    projectGroupingForRepoCache.set(repoMap, byIndex)
   }
+  if (!byRepoId) {
+    byRepoId = new Map()
+    byIndex.set(indexKey, byRepoId)
+  }
+  byRepoId.set(repoId, result)
+  return result
 }
 
 export function getProjectHeaderRevealTarget(
@@ -216,17 +227,8 @@ export function getProjectHeaderRevealTarget(
   return getProjectGroupingForRepo(repoId, repoMap, buildProjectGroupingIndex(projectGrouping))
 }
 
-export function getDisplayedProjectGroupingForRepo<
-  R extends Pick<ProjectSectionRepo, 'displayName'>
->(
-  repoId: string,
-  repoMap: ReadonlyMap<string, R>,
-  projectIndex: ProjectGroupingIndex | null
-): ProjectHeaderRevealTarget<R> {
-  const target = getProjectGroupingForRepo(repoId, repoMap, projectIndex)
-  const group = projectIndex?.nameGroups.get(target.key)
-  return group ? { ...target, key: group.key, label: group.label } : target
-}
+export const getDisplayedProjectGroupingForRepo: typeof getProjectGroupingForRepo = (...args) =>
+  projectNameGroups.toDisplayedProjectGrouping(getProjectGroupingForRepo(...args), args[2])
 
 /** Actual membership, independent of where a lineage occurrence is displayed. */
 export function buildProjectOwnershipIndex<Item, R extends ProjectSectionRepo>(args: {
@@ -334,10 +336,6 @@ export function buildProjectSections<
   for (const [key, section] of sections) {
     section.activityItems = ownership.get(key)?.items ?? []
   }
-  return [
-    ...mergeSidebarProjectNameSections(
-      new Map(orderProjectSections(sections, repoMap, args.repoOrder, args.projectOrderBy)),
-      projectIndex?.nameGroups ?? new Map()
-    )
-  ]
+  const ordered = orderProjectSections(sections, repoMap, args.repoOrder, args.projectOrderBy)
+  return projectNameGroups.mergeOrderedSidebarProjectNameSections(ordered, projectIndex)
 }

@@ -129,11 +129,9 @@ export function resolveDocPreviewShareTarget(
   return {
     ok: true,
     target: withWorkspaceRoot(
-      owner.kind === 'runtime'
-        ? `runtime:${encodeURIComponent(owner.environmentId)}`
-        : toSshExecutionHostId(owner.connectionId),
+      `runtime:${encodeURIComponent(owner.environmentId)}`,
       filePath,
-      owner.kind === 'runtime' ? owner.worktreeRoot : location.requestBase
+      owner.worktreeRoot
     )
   }
 }

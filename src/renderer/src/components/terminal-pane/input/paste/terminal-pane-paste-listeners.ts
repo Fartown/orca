@@ -5,6 +5,11 @@ import {
   isClipboardEventPasteRequired
 } from '../../clipboard/terminal-clipboard-event-paste'
 import { assertClipboardTextWithinLimitWithYield } from '../../../../../../shared/clipboard/clipboard-text'
+import {
+  clipboardEventCarriesFiles,
+  consumeUnreadWindowsClipboardNativePaste
+} from './terminal-unread-clipboard-native-paste'
+import { clipboardEventCopiedFilePaths } from '@/components/native-chat/paste/native-chat-clipboard-payload'
 import { APP_MENU_PASTE_EVENT } from '@/lib/clipboard/menu/app-menu-paste'
 import {
   APP_MENU_SELECTION_ACTION_EVENT,
@@ -135,14 +140,27 @@ export function registerTerminalPanePasteListeners({
     if (!pane) {
       return
     }
+    const isUnreadWindowsClipboardFallback = consumeUnreadWindowsClipboardNativePaste(pane)
+    // Reading clipboardData.files encodes bitmaps synchronously in Chromium; only read it on the armed Windows fallback.
+    const eventCopiedFilePaths = isUnreadWindowsClipboardFallback
+      ? clipboardEventCopiedFilePaths(event)
+      : []
+    const eventCarriedFiles = clipboardEventCarriesFiles(event)
     if (isClipboardEventPasteRequired()) {
       const eventText = getClipboardEventText(event)
-      pasteFromClipboard(pane, 'paste-event', (options) =>
-        assertClipboardTextWithinLimitWithYield(eventText, options)
-      )
+      pasteFromClipboard(pane, 'paste-event', {
+        readClipboardText: (options) => assertClipboardTextWithinLimitWithYield(eventText, options),
+        eventCopiedFilePaths,
+        eventCarriedFiles,
+        isUnreadWindowsClipboardFallback
+      })
       return
     }
-    pasteFromClipboard(pane, 'paste-event')
+    pasteFromClipboard(pane, 'paste-event', {
+      eventCopiedFilePaths,
+      eventCarriedFiles,
+      isUnreadWindowsClipboardFallback
+    })
   }
 
   const onAppMenuPaste = (event: Event): void => {

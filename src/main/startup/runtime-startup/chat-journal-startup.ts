@@ -1,4 +1,5 @@
 import type { OrcaRuntimeService } from '../../runtime/orca-runtime'
+import { agentSessionRecordStoreHostServing } from '../../runtime/agent-session/records/agent-session-record-store-serving'
 import { isHostShuttingDown } from '../quit/host-shutdown-state'
 import { mainProcessState as state } from '../main-process-state'
 import { provideManagedAgentDetection } from '../../runtime/rpc/methods/host-management/managed-copy-detection'
@@ -6,6 +7,8 @@ import {
   reclaimManagedRuntimeReleasesAtLaunch,
   startManagedRuntimeAutoUpdates
 } from '../../runtime/rpc/methods/host-management/managed-runtime-install'
+import { startGoalFeatureForMainProcess } from '../main-process-goals'
+import { startLocalTasksForMainProcess } from '../main-process-local-tasks'
 
 // Background chat-journal maintenance waits for this Electron host's serving milestone.
 const serving = Promise.withResolvers<void>()
@@ -17,6 +20,9 @@ export function beginChatJournalStartup(
   runtime: Pick<OrcaRuntimeService, 'beginStructuredAgentSessionStartupOpen' | 'requireStore'>,
   serveMode: boolean
 ): void {
+  // Fork hosts start here: terminal startup is bound, and nothing has bound RPC yet.
+  startLocalTasksForMainProcess()
+  startGoalFeatureForMainProcess()
   // Detection counts Orca's copies from launch, before the release reclaim in chatJournalHostServing.
   provideManagedAgentDetection(runtime)
   if (serveMode) {
@@ -41,9 +47,9 @@ export function chatJournalHostServing(): void {
   void windowFence
     .catch(() => {})
     .then(() => {
-      if (state.runtime) {
-        state.runtime.startPullRequestWatches({ admit: true })
-        reclaimManagedRuntimeReleasesAtLaunch(state.runtime)
+      if (state.core.runtime) {
+        agentSessionRecordStoreHostServing(state.core.runtime)
+        reclaimManagedRuntimeReleasesAtLaunch(state.core.runtime)
         startManagedRuntimeAutoUpdates()
       }
     })

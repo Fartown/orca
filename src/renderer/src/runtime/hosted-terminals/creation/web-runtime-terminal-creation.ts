@@ -2,6 +2,7 @@ import { createWebRuntimeSessionTerminalResult } from './web-runtime-terminal-cr
 import { observePairedTerminalLaunch } from '@/terminal-launch-diagnostics/paired-terminal-launch'
 import { resolveWebRuntimeSessionEnvironmentId } from '../../web-session-tabs-sync/workspace-selection/web-runtime-session-workspace-routing'
 import { useAppStore } from '../../../store/index'
+import { cancelPendingBotThreadOpen } from '@/lib/agent-session/open/bot-thread-open-lifecycle'
 import type {
   CreateWebRuntimeSessionTerminalArgs,
   WebRuntimeTerminalCreateOutcome,
@@ -51,6 +52,9 @@ async function createWebRuntimeTerminal(
   options: TerminalCreateOptions,
   create: () => Promise<CreatedWebRuntimeSessionTerminal>
 ): Promise<WebRuntimeTerminalCreateOutcome> {
+  if (options.userAct && args.activate !== false) {
+    cancelPendingBotThreadOpen()
+  }
   if (options.userAct && !(await startStoppedWslHostForUserAct(args.environmentId))) {
     // The start already told the user why; the host is still stopped.
     return { status: 'failed', message: stoppedWslHostMessage(args.environmentId) }
