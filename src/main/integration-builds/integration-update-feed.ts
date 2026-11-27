@@ -5,29 +5,14 @@ import type { AppUpdater } from 'electron-updater'
 import { linuxAppImageUpdateUnavailableMessage } from './linux-appimage-update-availability'
 import {
   fetchIntegrationRelease,
-  integrationChanges,
+  integrationChangeSummary,
   integrationDownloadUrl,
   INTEGRATION_RELEASES_URL,
   isPreviewDesktopVersion,
   type IntegrationRelease
 } from '../../shared/integration-builds/release-catalog'
 
-const SHOWN_CHANGES = 3
-
 let resolvedRelease: IntegrationRelease | null = null
-
-// The update card renders one paragraph; the release page keeps the full list.
-function changeSummary(release: IntegrationRelease): string | null {
-  const changes = integrationChanges(release)
-  if (!changes.length) {
-    return null
-  }
-  const shown = changes
-    .slice(0, SHOWN_CHANGES)
-    .map((change) => change.title)
-    .join(' · ')
-  return changes.length > SHOWN_CHANGES ? `${shown} +${changes.length - SHOWN_CHANGES}` : shown
-}
 
 export function integrationChangelog(version: string) {
   const release = resolvedRelease
@@ -41,7 +26,7 @@ export function integrationChangelog(version: string) {
         ? `Orca ${release.desktopVersion}`
         : `Orca Integration ${release.sha.slice(0, 12)}`,
       description:
-        changeSummary(release) ??
+        integrationChangeSummary(release) ??
         (process.platform === 'linux'
           ? 'Fork integration build for Linux x64. AppImage updates come from Fartown/orca. Extracted installations require manual replacement.'
           : 'Fork integration build, signed by a fixed self-signed publisher and not notarized. Native updates work between builds with this identity. Older ad-hoc builds require one manual DMG installation first.'),
@@ -92,9 +77,13 @@ export async function pinIntegrationReleaseFeed(
   if (unavailableMessage) {
     throw new Error(unavailableMessage)
   }
+  const installedDesktopVersion =
+    typeof app.getVersion === 'function' ? app.getVersion() : undefined
   const release = await fetchIntegrationRelease(
     process.platform === 'linux' ? 'linux' : 'mac',
-    (input, init) => net.fetch(input instanceof URL ? input.toString() : input, init)
+    (input: RequestInfo | URL, init?: RequestInit) =>
+      net.fetch(input instanceof URL ? input.toString() : input, init),
+    { installedDesktopVersion }
   )
   resolvedRelease = release
   updater.allowPrerelease = true

@@ -1,3 +1,26 @@
+import {
+  hasInstalledReleaseBaseline,
+  integrationChanges,
+  integrationChangeSummary,
+  integrationEngineeringChanges,
+  isCandidateMetadataInstalledOrOlder,
+  isReleaseInstalledOrOlder,
+  MAX_AGGREGATED_RELEASES,
+  mergeIntegrationReleaseChanges,
+  parseAtomReleaseEntries,
+  withFallbackEngineeringChanges,
+  type IntegrationChange,
+  type IntegrationReleaseQueryOptions
+} from './integration-release-changes'
+
+export {
+  integrationChanges,
+  integrationChangeSummary,
+  integrationEngineeringChanges,
+  type IntegrationChange,
+  type IntegrationReleaseQueryOptions
+}
+
 export const INTEGRATION_RELEASES_URL = 'https://github.com/Fartown/orca/releases'
 const API_URL = 'https://api.github.com/repos/Fartown/orca/releases?per_page=30'
 const TAG_PATTERN = /^integration-[1-9]\d*-([a-f0-9]{12})$/
@@ -12,12 +35,6 @@ export type IntegrationAsset = {
   sha256: string
 }
 
-/** A pull request merged into the integration branch, or a direct commit without `number`. */
-export type IntegrationChange = {
-  number?: number
-  title: string
-}
-
 export type IntegrationRelease = {
   tag: string
   sha: string
@@ -28,6 +45,8 @@ export type IntegrationRelease = {
   linuxAssets?: IntegrationAsset[]
   /** Unvalidated manifest list; read it through `integrationChanges`. */
   changes?: unknown
+  /** Optional engineering-only fallback list; read through `integrationEngineeringChanges`. */
+  engineeringChanges?: unknown
 }
 
 export function integrationDownloadUrl(tag: string, name = ''): string {
@@ -48,29 +67,6 @@ function isDesktopVersionOf(version: unknown, sha: string): boolean {
     (isPreviewDesktopVersion(version) ||
       version.match(LOCAL_DESKTOP_VERSION)?.[1] === sha.slice(0, 12))
   )
-}
-
-// Display-only, so a malformed list reads as empty instead of rejecting the update.
-export function integrationChanges(release: IntegrationRelease): IntegrationChange[] {
-  const value = release.changes
-  if (!Array.isArray(value) || value.length > 100) {
-    return []
-  }
-  const changes: IntegrationChange[] = []
-  for (const change of value) {
-    const title = change?.title
-    const number = change?.number
-    if (
-      typeof title !== 'string' ||
-      !title.trim() ||
-      title.length > 300 ||
-      (number !== undefined && !(Number.isSafeInteger(number) && number > 0))
-    ) {
-      return []
-    }
-    changes.push(number === undefined ? { title: title.trim() } : { number, title: title.trim() })
-  }
-  return changes
 }
 
 export function parseIntegrationRelease(value: unknown, tag: string): IntegrationRelease {
@@ -179,15 +175,50 @@ function hasPackages(release: IntegrationRelease, required: string[]): boolean {
     .every((name) => assets.some((asset) => asset.name === name))
 }
 
-async function fetchPublicRelease(required: string[], fetcher: typeof fetch) {
+async function collectNewerReleases(
+  latest: IntegrationRelease,
+  olderCandidates: readonly { tag: string; title?: unknown; notes?: unknown }[],
+  required: string[],
+  fetcher: typeof fetch,
+  options?: IntegrationReleaseQueryOptions
+): Promise<IntegrationRelease> {
+  if (!hasInstalledReleaseBaseline(options) || isReleaseInstalledOrOlder(latest, options)) {
+    return latest
+  }
+  const olderNewer: IntegrationRelease[] = []
+  for (const candidate of olderCandidates.slice(0, MAX_AGGREGATED_RELEASES - 1)) {
+    if (isCandidateMetadataInstalledOrOlder(candidate, options)) {
+      break
+    }
+    try {
+      const release = await readManifest(candidate.tag, fetcher)
+      if (isReleaseInstalledOrOlder(release, options)) {
+        break
+      }
+      if (hasPackages(release, required)) {
+        olderNewer.push(withFallbackEngineeringChanges(release, candidate.notes))
+      }
+    } catch {
+      break
+    }
+  }
+  return mergeIntegrationReleaseChanges(latest, olderNewer)
+}
+
+async function fetchPublicRelease(
+  required: string[],
+  fetcher: typeof fetch,
+  options?: IntegrationReleaseQueryOptions
+) {
   const body = await fetchReleaseData(`${INTEGRATION_RELEASES_URL}.atom`, fetcher, (response) =>
     response.text()
   )
-  const tags = [...new Set([...body.matchAll(ATOM_TAG_LINK)].map((match) => match[1]))]
-    .sort((a, b) => Number(b.split('-')[1]) - Number(a.split('-')[1]))
-    .slice(0, 3)
+  const atomEntries = parseAtomReleaseEntries(body)
+  const allTags = [...new Set([...body.matchAll(ATOM_TAG_LINK)].map((match) => match[1]))].sort(
+    (a, b) => Number(b.split('-')[1]) - Number(a.split('-')[1])
+  )
   // The publisher exposes releases only after all assets exist; still reject partial uploads.
-  for (const tag of tags) {
+  for (const [index, tag] of allTags.slice(0, 3).entries()) {
     try {
       const release = await readManifest(tag, fetcher)
       if (!hasPackages(release, required)) {
@@ -205,7 +236,13 @@ async function fetchPublicRelease(required: string[], fetcher: typeof fetch) {
             )
           )
       )
-      return release
+      const latest = withFallbackEngineeringChanges(release, atomEntries.get(tag)?.content)
+      const olderCandidates = allTags.slice(index + 1).map((olderTag) => ({
+        tag: olderTag,
+        title: atomEntries.get(olderTag)?.title,
+        notes: atomEntries.get(olderTag)?.content
+      }))
+      return await collectNewerReleases(latest, olderCandidates, required, fetcher, options)
     } catch (error) {
       if (!(error instanceof UpdateHttpError && error.status === 404)) {
         throw error
@@ -217,7 +254,8 @@ async function fetchPublicRelease(required: string[], fetcher: typeof fetch) {
 
 export async function fetchIntegrationRelease(
   platform: 'android' | 'mac' | 'linux',
-  fetcher: typeof fetch = fetch
+  fetcher: typeof fetch = fetch,
+  options?: IntegrationReleaseQueryOptions
 ): Promise<IntegrationRelease> {
   const required = [
     'build-info.json',
@@ -232,7 +270,7 @@ export async function fetchIntegrationRelease(
     releases = await fetchJson(API_URL, fetcher)
   } catch (error) {
     if (error instanceof UpdateHttpError && [403, 429].includes(error.status)) {
-      return fetchPublicRelease(required, fetcher)
+      return fetchPublicRelease(required, fetcher, options)
     }
     throw error
   }
@@ -252,15 +290,24 @@ export async function fetchIntegrationRelease(
       )
   )
   // GitHub can order releases by the target commit's date rather than the build run.
-  const latest = candidates.sort(
+  const sorted = candidates.sort(
     (a, b) => Number(b.tag_name.split('-')[1]) - Number(a.tag_name.split('-')[1])
-  )[0]
-  if (!latest) {
+  )
+  const latestCandidate = sorted[0]
+  if (!latestCandidate) {
     throw new Error('No complete integration update has been published yet.')
   }
-  const release = await readManifest(latest.tag_name, fetcher)
+  const release = withFallbackEngineeringChanges(
+    await readManifest(latestCandidate.tag_name, fetcher),
+    latestCandidate.body
+  )
   if (!hasPackages(release, required)) {
     throw new Error('Integration update manifest is missing a package.')
   }
-  return release
+  const olderCandidates = sorted.slice(1).map((candidate) => ({
+    tag: String(candidate.tag_name),
+    title: candidate.name,
+    notes: candidate.body
+  }))
+  return collectNewerReleases(release, olderCandidates, required, fetcher, options)
 }

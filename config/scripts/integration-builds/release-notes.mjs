@@ -152,6 +152,16 @@ export function manifestChanges(changes, syncSummaries = []) {
   return entries.slice(0, MAX_MANIFEST_CHANGES)
 }
 
+// Separate from `changes` so engineering-only builds have a fallback without polluting multi-build diffs.
+export function manifestEngineeringChanges(changes) {
+  return engineeringChanges(changes)
+    .map((change) => ({
+      ...(change.number ? { number: change.number } : {}),
+      title: truncate(change.title, MAX_MANIFEST_TITLE)
+    }))
+    .slice(0, MAX_MANIFEST_CHANGES)
+}
+
 export function syncHeadline(summary) {
   const tags = summary.releases.map((release) => release.tag)
   const details = [

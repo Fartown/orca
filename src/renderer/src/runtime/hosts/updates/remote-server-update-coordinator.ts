@@ -17,7 +17,10 @@ import {
   type PublicKnownRuntimeEnvironment
 } from '../../../../../shared/remote-runtime/host-catalog/runtime-environments'
 import type { RuntimeStatus } from '../../../../../shared/remote-runtime/session-graph/runtime-session-contracts'
-import type { UpdateCheckOptions } from '../../../../../shared/updater/update-status-types'
+import type {
+  ChangelogData,
+  UpdateCheckOptions
+} from '../../../../../shared/updater/update-status-types'
 import { waitForReplacementRuntime } from './remote-server-restart-wait'
 import { getRemoteServerNewerThanClientVersion } from './remote-server-version-skew'
 import { remoteServerUpdateErrorMessage } from './remote-server-update-errors'
@@ -52,6 +55,7 @@ export type RemoteServerUpdateEntry = {
   managedOverSsh?: boolean
   /** This app's version when it was compared; read through getRemoteServerNewerThanClientVersion. */
   clientVersion?: string | null
+  changelog?: ChangelogData | null
 }
 
 export type RemoteServerUpdateTransport = {
@@ -177,15 +181,11 @@ export async function inspectRemoteServerUpdate(
           ...base,
           ...statusFields,
           phase: 'available',
-          targetVersion: checked.status.version
+          targetVersion: checked.status.version,
+          changelog: checked.status.changelog
         }
       }
-      return {
-        ...base,
-        ...statusFields,
-        phase: 'current',
-        targetVersion: currentVersion
-      }
+      return { ...base, ...statusFields, phase: 'current', targetVersion: currentVersion }
     } catch (error) {
       return {
         ...base,
@@ -258,6 +258,7 @@ export async function runRemoteServerUpdate(
       ...next,
       phase: 'downloading',
       targetVersion: available.status.version,
+      changelog: available.status.changelog,
       progress: 0
     }
     onProgress(next)

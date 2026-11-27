@@ -6,10 +6,18 @@ import { useIntegrationUpdateAction } from './use-integration-update-action'
 
 export function IntegrationSettingsUpdateSection() {
   const t = useMobileTranslation()
-  const { stage, error, label, pending, onPress } = useIntegrationUpdateAction()
+  const { stage, error, summary, label, pending, onPress } = useIntegrationUpdateAction()
   const version = Constants.expoConfig?.version
   return (
-    <SettingsSection footer={error ? <SettingsNote error>{error}</SettingsNote> : undefined}>
+    <SettingsSection
+      footer={
+        error ? (
+          <SettingsNote error>{error}</SettingsNote>
+        ) : summary ? (
+          <SettingsNote>{summary}</SettingsNote>
+        ) : undefined
+      }
+    >
       {version ? (
         <ListRow
           key="version"

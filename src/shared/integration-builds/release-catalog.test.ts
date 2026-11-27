@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   fetchIntegrationRelease,
   integrationChanges,
+  integrationChangeSummary,
   integrationDownloadUrl,
   parseIntegrationRelease
 } from './release-catalog'
@@ -255,5 +256,164 @@ describe('fork integration release catalog', () => {
   it('does not accept arbitrary download origins or traversal', () => {
     expect(() => integrationDownloadUrl('https://elsewhere', 'app.apk')).toThrow()
     expect(() => integrationDownloadUrl(tag, '../app.apk')).toThrow()
+  })
+
+  it('aggregates intermediate user-facing changes across skipped preview builds and stops at the installed version', async () => {
+    const tag102 = 'integration-102-cccccccccccc'
+    const tag101 = 'integration-101-bbbbbbbbbbbb'
+    const tag100 = 'integration-100-aaaaaaaaaaaa'
+    const buildRelease = (runTag: string, name: string, body = '') => ({
+      ...release,
+      tag_name: runTag,
+      name,
+      body
+    })
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        json([
+          buildRelease(
+            tag102,
+            'Orca 1.4.214-preview.102',
+            '<details>\n<summary>工程改动 1 项（测试、文档、CI、重构等）</summary>\n\n- docs(goals): record merge\n\n</details>'
+          ),
+          buildRelease(tag101, 'Orca 1.4.214-preview.101'),
+          buildRelease(tag100, 'Orca 1.4.214-preview.100')
+        ])
+      )
+      .mockResolvedValueOnce(
+        json({
+          ...manifest,
+          tag: tag102,
+          sha: 'c'.repeat(40),
+          desktopVersion: '1.4.214-preview.102',
+          changes: []
+        })
+      )
+      .mockResolvedValueOnce(
+        json({
+          ...manifest,
+          tag: tag101,
+          sha: 'b'.repeat(40),
+          desktopVersion: '1.4.214-preview.101',
+          changes: [{ title: '新功能：Goal 守卫与确认框接管 (#152)' }]
+        })
+      )
+
+    const resolved = await fetchIntegrationRelease('mac', fetcher, {
+      installedDesktopVersion: '1.4.214-preview.100'
+    })
+    expect(resolved.desktopVersion).toBe('1.4.214-preview.102')
+    expect(integrationChangeSummary(resolved)).toBe('新功能：Goal 守卫与确认框接管 (#152)')
+    expect(
+      fetcher.mock.calls.some(([url]) => String(url).includes(`${tag100}/build-info.json`))
+    ).toBe(false)
+  })
+
+  it('falls back to engineering changes from manifest, markdown notes, or atom feed when a span has no user-facing changes', async () => {
+    const tag102 = 'integration-102-cccccccccccc'
+    const tag101 = 'integration-101-bbbbbbbbbbbb'
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        json([
+          {
+            ...release,
+            tag_name: tag102,
+            name: 'Orca 1.4.214-preview.102',
+            body: '<details>\n<summary>工程改动 1 项（测试、文档、CI、重构等）</summary>\n\n- docs(goals): 记录 PR #152 合入结果\n\n</details>'
+          },
+          { ...release, tag_name: tag101, name: 'Orca 1.4.214-preview.101' }
+        ])
+      )
+      .mockResolvedValueOnce(
+        json({
+          ...manifest,
+          tag: tag102,
+          sha: 'c'.repeat(40),
+          desktopVersion: '1.4.214-preview.102',
+          changes: []
+        })
+      )
+
+    const fromMarkdown = await fetchIntegrationRelease('mac', fetcher, {
+      installedDesktopVersion: '1.4.214-preview.101'
+    })
+    expect(integrationChangeSummary(fromMarkdown)).toBe('docs(goals): 记录 PR #152 合入结果')
+    expect(fetcher).toHaveBeenCalledTimes(2)
+
+    const atomBody = new Response(
+      `<feed><entry><link rel="alternate" href="https://github.com/Fartown/orca/releases/tag/${tag102}"/><title>Orca 1.4.214-preview.102</title><content type="html">&lt;details&gt;&lt;summary&gt;工程改动 1 项&lt;/summary&gt;&lt;ul&gt;&lt;li&gt;docs(goals): 记录 PR &lt;a href=&quot;https://github.com/Fartown/orca/pull/152&quot;&gt;#152&lt;/a&gt; 合入结果&lt;/li&gt;&lt;/ul&gt;&lt;/details&gt;</content></entry></feed>`
+    )
+    const atomFetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response('', { status: 429 }))
+      .mockResolvedValueOnce(atomBody)
+      .mockResolvedValueOnce(
+        json({
+          ...manifest,
+          tag: tag102,
+          sha: 'c'.repeat(40),
+          desktopVersion: '1.4.214-preview.102',
+          androidVersionCode: 211392010,
+          changes: []
+        })
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 200 }))
+    const fromAtom = await fetchIntegrationRelease('android', atomFetcher, {
+      installedAndroidVersionCode: 211392009
+    })
+    expect(integrationChangeSummary(fromAtom)).toBe('docs(goals): 记录 PR #152 合入结果')
+  })
+
+  it('aggregates Android changes across newer versionCodes and stops at the installed APK', async () => {
+    const tag103 = 'integration-103-dddddddddddd'
+    const tag102 = 'integration-102-cccccccccccc'
+    const tag101 = 'integration-101-bbbbbbbbbbbb'
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        json([
+          { ...release, tag_name: tag103 },
+          { ...release, tag_name: tag102 },
+          { ...release, tag_name: tag101 }
+        ])
+      )
+      .mockResolvedValueOnce(
+        json({
+          ...manifest,
+          tag: tag103,
+          sha: 'd'.repeat(40),
+          desktopVersion: '1.4.214-preview.103',
+          androidVersionCode: 211392003,
+          changes: [{ number: 160, title: 'fix(session-names): 统一会话命名' }]
+        })
+      )
+      .mockResolvedValueOnce(
+        json({
+          ...manifest,
+          tag: tag102,
+          sha: 'c'.repeat(40),
+          desktopVersion: '1.4.214-preview.102',
+          androidVersionCode: 211392002,
+          changes: [],
+          engineeringChanges: [{ title: 'docs(goals): update journal' }]
+        })
+      )
+      .mockResolvedValueOnce(
+        json({
+          ...manifest,
+          tag: tag101,
+          sha: 'b'.repeat(40),
+          desktopVersion: '1.4.214-preview.101',
+          androidVersionCode: 211392001,
+          changes: [{ title: '新功能：Goal 模式 (#152)' }]
+        })
+      )
+
+    const resolved = await fetchIntegrationRelease('android', fetcher, {
+      installedAndroidVersionCode: 211392001
+    })
+    expect(integrationChangeSummary(resolved)).toBe('fix(session-names): 统一会话命名')
   })
 })
