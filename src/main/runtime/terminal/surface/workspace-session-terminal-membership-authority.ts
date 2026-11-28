@@ -9,7 +9,7 @@ import {
   collectMembershipRewrites,
   type MembershipRewrites
 } from './workspace-session-membership-rewrites'
-import { pruneTabGroupLayoutAfterRetirement } from './mobile-session-terminal-retirement'
+import { restoreRetainedTerminalTabsInGroups } from '../../../mobile-terminal-surface-recovery/rebase-retained-tab-groups'
 
 function collectLeafIds(node: TerminalPaneLayoutNode | null, ids: Set<string>): void {
   if (!node) {
@@ -174,9 +174,11 @@ export function rebaseWorkspaceSessionTerminalMembership(
   const tabGroups = { ...incoming.tabGroups }
   const tabGroupLayouts = { ...incoming.tabGroupLayouts }
   const activeTabIdByWorktree = { ...incoming.activeTabIdByWorktree }
+  const activeGroupIdByWorktree = { ...incoming.activeGroupIdByWorktree }
   let includeUnifiedTabs = incoming.unifiedTabs !== undefined
   let includeTabGroups = incoming.tabGroups !== undefined
   let includeTabGroupLayouts = incoming.tabGroupLayouts !== undefined
+  let includeActiveGroupId = incoming.activeGroupIdByWorktree !== undefined
   let rebasedMembership = false
   const rebased: { worktreeId: string; tabIds: string[] }[] = []
   const worktreeIds = new Set([
@@ -241,38 +243,44 @@ export function rebaseWorkspaceSessionTerminalMembership(
       delete tabGroups[worktreeId]
       delete tabGroupLayouts[worktreeId]
       delete activeTabIdByWorktree[worktreeId]
+      delete activeGroupIdByWorktree[worktreeId]
       continue
-    }
-    if (includeUnifiedTabs || rebasedUnifiedTabs.length > 0) {
-      unifiedTabs[worktreeId] = rebasedUnifiedTabs
-      includeUnifiedTabs = true
     }
     const validTabIds = new Set([...terminalTabIds, ...rebasedUnifiedTabs.map((tab) => tab.id)])
     const rebasedGroups = rebaseTabGroups(
       incoming.tabGroups?.[worktreeId] ?? prior.tabGroups?.[worktreeId] ?? [],
       validTabIds
     )
-    if (includeTabGroups || rebasedGroups.length > 0) {
-      tabGroups[worktreeId] = rebasedGroups
-      includeTabGroups = true
-    }
-    const rebasedGroupLayout = pruneTabGroupLayoutAfterRetirement(
-      incoming.tabGroupLayouts?.[worktreeId] ?? prior.tabGroupLayouts?.[worktreeId],
-      new Set(rebasedGroups.map((group) => group.id))
+    const restored = restoreRetainedTerminalTabsInGroups(
+      worktreeId,
+      incoming,
+      prior,
+      rebasedGroups,
+      rebasedUnifiedTabs,
+      validTabIds,
+      terminalTabIds,
+      tabs[0]?.id
     )
-    if (rebasedGroupLayout) {
-      tabGroupLayouts[worktreeId] = rebasedGroupLayout
-      includeTabGroupLayouts = true
+    if ((includeUnifiedTabs ||= restored.unifiedTabs.length > 0)) {
+      unifiedTabs[worktreeId] = restored.unifiedTabs
+    }
+    if ((includeTabGroups ||= restored.groups.length > 0)) {
+      tabGroups[worktreeId] = restored.groups
+    }
+    if ((includeTabGroupLayouts ||= restored.groupLayout !== undefined) && restored.groupLayout) {
+      tabGroupLayouts[worktreeId] = restored.groupLayout
     } else {
       delete tabGroupLayouts[worktreeId]
     }
-    if (!validTabIds.has(activeTabIdByWorktree[worktreeId] ?? '')) {
-      activeTabIdByWorktree[worktreeId] =
-        (prior.activeTabIdByWorktree?.[worktreeId] &&
-        validTabIds.has(prior.activeTabIdByWorktree[worktreeId] ?? '')
-          ? prior.activeTabIdByWorktree[worktreeId]
-          : (rebasedGroups[0]?.activeTabId ?? tabs[0]?.id)) ?? null
+    if (
+      restored.activeGroupId &&
+      (includeActiveGroupId ||= prior.activeGroupIdByWorktree?.[worktreeId] !== undefined)
+    ) {
+      activeGroupIdByWorktree[worktreeId] = restored.activeGroupId
+    } else if (!restored.activeGroupId) {
+      delete activeGroupIdByWorktree[worktreeId]
     }
+    activeTabIdByWorktree[worktreeId] = restored.activeTabId
     tabsByWorktree[worktreeId] = tabs
   }
   const next: WorkspaceSessionState = {
@@ -285,7 +293,8 @@ export function rebaseWorkspaceSessionTerminalMembership(
           activeTabIdByWorktree,
           ...(includeUnifiedTabs ? { unifiedTabs } : {}),
           ...(includeTabGroups ? { tabGroups } : {}),
-          ...(includeTabGroupLayouts ? { tabGroupLayouts } : {})
+          ...(includeTabGroupLayouts ? { tabGroupLayouts } : {}),
+          ...(includeActiveGroupId ? { activeGroupIdByWorktree } : {})
         }
       : {})
   }
