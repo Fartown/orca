@@ -325,3 +325,13 @@ export function clearPreHandlerPtyState(ptyId: string): void {
   discardedPreHandlerPtyStates.delete(ptyId)
   warnedLostHandlerPtyIds.delete(ptyId)
 }
+
+/** Drop prior-lifetime exits when a host announces a new spawn of the same PTY id, keeping startup bytes and any matching-incarnation exit. */
+export function clearStalePreHandlerPtyExitsOnSpawn(ptyId: string, incarnationId?: unknown): void {
+  clearConsumedPreHandlerPtyExit(ptyId)
+  if (isPtyIncarnationId(incarnationId)) {
+    retainPreHandlerPtyExits(ptyId, (exit) => exit.incarnationId === incarnationId)
+    return
+  }
+  preHandlerPtyExit.delete(ptyId)
+}

@@ -1,3 +1,7 @@
+import {
+  isPaneSleepRecord,
+  type SleepingAgentSessionRecord
+} from '../../../../../shared/agent-session/lifecycle/agent-session-resume'
 import { makePaneKey } from '../../../../../shared/workspace-layout/stable-pane-id'
 import type {
   TerminalLayoutSnapshot,
@@ -13,6 +17,7 @@ const boundaryResolvedAtByPaneKey = new Map<string, number>()
 export function observeHibernationPtyBindings(args: {
   tabsByWorktree: Record<string, TerminalTab[]>
   terminalLayoutsByTabId: Record<string, TerminalLayoutSnapshot | undefined>
+  sleepingAgentSessionsByPaneKey?: Record<string, SleepingAgentSessionRecord>
   now: number
   idleMs: number
 }): void {
@@ -33,6 +38,12 @@ export function observeHibernationPtyBindings(args: {
       try {
         paneKey = makePaneKey(tabId, leafId)
       } catch {
+        continue
+      }
+      const sleepRecord = args.sleepingAgentSessionsByPaneKey?.[paneKey]
+      if (sleepRecord && isPaneSleepRecord(sleepRecord)) {
+        ptyBindingByPaneKey.delete(paneKey)
+        boundaryResolvedAtByPaneKey.delete(paneKey)
         continue
       }
       seenPaneKeys.add(paneKey)
@@ -93,4 +104,17 @@ export function getHibernationBoundaryResolvedAtByPaneKey(
     return resolvedAt === undefined ? {} : { [onlyPaneKey]: resolvedAt }
   }
   return Object.fromEntries(boundaryResolvedAtByPaneKey)
+}
+/** Drop retained age after hibernation or host respawn so a reused PTY id gets a fresh idle grace window. */
+export function forgetHibernationPtyBinding(paneKey: string): void {
+  if (!paneKey) {
+    return
+  }
+  ptyBindingByPaneKey.delete(paneKey)
+  boundaryResolvedAtByPaneKey.delete(paneKey)
+}
+
+export function resetHibernationPaneAgeForTests(): void {
+  ptyBindingByPaneKey.clear()
+  boundaryResolvedAtByPaneKey.clear()
 }

@@ -164,6 +164,7 @@ async function currentCandidates(now: number, targetWorktreeId?: string, pane?: 
     observeHibernationPtyBindings({
       tabsByWorktree: freshState.tabsByWorktree,
       terminalLayoutsByTabId: freshState.terminalLayoutsByTabId,
+      sleepingAgentSessionsByPaneKey: freshState.sleepingAgentSessionsByPaneKey,
       now,
       idleMs: getEffectiveAgentHibernationIdleMs(freshState.settings?.agentHibernationIdleMs)
     })

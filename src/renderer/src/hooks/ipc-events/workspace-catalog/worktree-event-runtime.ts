@@ -10,6 +10,7 @@ import {
   activateNotifiedWorkspace,
   refreshNotifiedWorkspaceCatalog
 } from '@/mobile-terminal-surface-recovery/notified-workspace-activation'
+import { registerHostSpawnedTerminalRecovery } from '@/mobile-terminal-surface-recovery/host-spawned-terminal-recovery'
 import type { RuntimeClientEvent } from '../../../../../shared/remote-runtime/session-graph/runtime-client-events'
 import type { AppState } from '../../../store/types'
 import { hostWorktreeTarget } from '../../../../../shared/worktree/host-qualified-identity'
@@ -74,6 +75,7 @@ export function createWorktreeEventRuntime(
   unsubs: (() => void)[],
   isRuntimeEnvironmentActive: () => boolean
 ): WorktreeEventRuntime {
+  registerHostSpawnedTerminalRecovery(unsubs)
   const sortOrderBatch = createWorktreeSortOrderPublicationBatch((patches) =>
     useAppStore.setState((s) => patchWorktreeSortOrderBatch(s, patches))
   )

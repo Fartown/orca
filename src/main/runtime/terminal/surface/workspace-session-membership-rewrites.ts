@@ -25,6 +25,10 @@ export function collectMembershipRewrites(
         next.activeTabIdByWorktree?.[worktreeId],
         incoming.activeTabIdByWorktree?.[worktreeId]
       ) ||
+      differs(
+        next.activeGroupIdByWorktree?.[worktreeId],
+        incoming.activeGroupIdByWorktree?.[worktreeId]
+      ) ||
       tabIds.some((tabId) =>
         differs(next.terminalLayoutsByTabId[tabId], incoming.terminalLayoutsByTabId?.[tabId])
       )

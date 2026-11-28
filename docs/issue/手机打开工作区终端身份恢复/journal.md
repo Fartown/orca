@@ -3,8 +3,8 @@ title: '手机打开工作区终端身份恢复'
 slug: '手机打开工作区终端身份恢复'
 status: testing
 created: 2026-10-24
-updated: 2026-11-21
-external_ids: ['STA-3859', 'Fartown/orca#92', 'Fartown/orca#148']
+updated: 2026-11-28
+external_ids: ['STA-3859', 'Fartown/orca#92', 'Fartown/orca#148', 'Fartown/orca#165']
 ---
 
 # 手机打开工作区终端身份恢复 开发 Journal
@@ -100,6 +100,20 @@ external_ids: ['STA-3859', 'Fartown/orca#92', 'Fartown/orca#148']
 - 影响范围：REQ-001～REQ-006；旧窄版批准只作为历史证据，新增范围须本地/SSH、Git/folder、多窗格、关闭竞态和旧 peer 的实际验证。
 
 ## 3. 开发记录
+
+### 2026-11-28 修复休眠重连循环、旧退出墓碑误关活标签与 rebaseTabGroups 丢序
+
+- 本轮目标：彻底阻断 `experimentalAgentHibernation` 场景下“休眠与配对端自动重连 60s 互搏 → 同 ID 重生残留旧 `preHandlerPtyExit` 墓碑 → 手机激活误走 `pty-exit` 关掉原标签并永久拉黑 hook → 主进程 `rebaseTabGroups` 丢弃原 `tabOrder`/layout”的连锁故障，同时将上游改动压至最小注册点。
+- 完成内容：
+  1. `hibernation-sleep-session-write.ts` 在 `terminal-pane-hibernation.ts` 写入 `suppressedPtyExitIds` 和终止 PTY **之前**，直接按目标执行主机分区把 `worktree-sleep` 刷给主进程（失败或 `skipped` 时 fail-closed 不杀 PTY）；`await` 返回后复核 tab/PTY/输入/agent 状态，若期间变化则回滚主进程并中止；`pty.kill`/`stopExact` 失败时只回滚自己写入的记录并显式清回目标宿主分区（覆盖本地、SSH、folder 宿主）。同时在 `agent-hibernation-pane-age.ts` 用 `isPaneSleepRecord` 跳过并清除已休眠 pane 的计时，避免 60s tick 重新写入旧绑定年龄。
+  2. 新增 `host-spawned-terminal-recovery.ts`，在既有接缝 `worktree-event-runtime.ts` 订阅主进程全路径推送的 `window.api.pty.onSpawned`，调用 `pty-pre-handler-buffer.ts` 末尾追加的 `clearStalePreHandlerPtyExitsOnSpawn` 按 `incarnationId` 仅剔除异代/无代旧退出墓碑（保留 `preHandlerPtyData` 启动输出及同代快退）并重置该 PTY 对应 pane 的休眠计时；覆盖前台、后台、分屏及恢复路径，无需修改 `terminal-presentation-ipc-bridge.ts` 或 `worktree-agent-live-surface-adoption.ts`。
+  3. `rebase-retained-tab-groups.ts` 在主进程因高 revision 保留原 `tabsByWorktree` 与 `unifiedTabs` 时，按原序与 pinned 前置不变量恢复 `tabGroups.tabOrder`（兼容 `tab.id !== tab.entityId`、尊重 `incoming` 改组、去重并对缺失目标组回退到首组对齐 `groupId`），并同步恢复 `tabGroupLayouts` 分屏结构与 `activeGroupIdByWorktree`（含 `collectMembershipRewrites` 上报）。
+- 代码或文档变更：新增 `src/renderer/src/mobile-terminal-surface-recovery/hibernation-sleep-session-write.ts`、`src/renderer/src/mobile-terminal-surface-recovery/host-spawned-terminal-recovery.ts`、`src/main/mobile-terminal-surface-recovery/rebase-retained-tab-groups.ts` 及 3 份回归测试；最小接缝修改 `terminal-pane-hibernation.ts`、`agent-hibernation-pane-age.ts`、`agent-hibernation-coordinator.ts`、`pty-pre-handler-buffer.ts`、`worktree-event-runtime.ts`（既有接缝）、`workspace-session-terminal-membership-authority.ts`、`workspace-session-membership-rewrites.ts`，并同步更新 `config/fork-features.jsonc`、`config/architecture-policies.jsonc` 与本记录。
+- 验证证据：
+  - 静态与单测门禁：`pnpm check:architecture-policies`、`pnpm check:fork-features`、`pnpm check:fork-docs` 全绿；`mobile-terminal-surface-recovery` 注册单测 16 文件 50 用例全绿；`ORCA_BACKGROUND_LAUNCH=1 pnpm check:changed --base=HEAD` 39/39 全绿。
+  - 真实 Electron 页面验证（隔离 HOME，`ORCA_BACKGROUND_LAUNCH=1`，`1440x900` 隐藏渲染 + CDP 截图）：既有 `tests/e2e/mobile-terminal-surface-recovery.spec.ts` 6/6 本机用例通过（1 SSH 夹具用例跳过）；新增 TC-024 三场景真实页面验证全部通过（休眠立即落盘 `worktree-sleep`；同 `ptyId` 重生经真实 `pty:spawned` 清理旧退出墓碑后切换标签不误关且 xterm 完整渲染 `HIBERNATION_RESPAWN_VERIFIED_165`；stale `rev: 80` 写入后 reload 仍保留 3 个原标签、垂直 30%/70% 双分屏与 `activeGroupId: group-2`）。证据归档于 `.docs/hibernation-reattach-surface-loss-ui-validation/2026-11-28/`。
+- 未解决问题：Desktop 跨主机休眠配对远端 `runtime:<envId>` 时经 `terminal.stopExact` 原子持久化远端 `worktree-sleep` 涉及跨版本 RPC 协议，留作独立后续项；本机运行中的 `preview.95` 需待新包安装/重启后真机复验。
+- 下一步：确认全量门禁全绿后按指示提交并走 PR。
 
 ### 2026-11-05 完整恢复链诊断与回归登记
 

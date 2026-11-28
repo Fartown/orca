@@ -359,7 +359,13 @@
         "src/renderer/src/lib/workspace/persistence/workspace-session.ts",
         "src/renderer/src/lib/workspace/persistence/workspace-session-patch.ts",
         "src/renderer/src/lib/workspace/persistence/workspace-session-host-persistence.ts",
-        "src/renderer/src/lib/workspace/persistence/workspace-session-acknowledged-entries.ts"
+        "src/renderer/src/lib/workspace/persistence/workspace-session-host-entries-write.ts",
+        "src/renderer/src/lib/workspace/persistence/workspace-session-acknowledged-entries.ts",
+        "src/renderer/src/store/record-transitions/keyed-record-transitions.ts",
+        "src/renderer/src/store/types.ts",
+        "src/shared/terminal/pty/lifecycle/pty-listed-session.ts",
+        "src/shared/workspace-layout/tab-groups/tab-types.ts",
+        "src/main/runtime/terminal/surface/mobile-session-terminal-retirement.ts"
       ],
       "policyId": "mobile-terminal-surface-recovery",
       "ownedPaths": [
@@ -432,6 +438,41 @@
           "file": "src/renderer/src/lib/workspace/activation/worktree-agent-live-surface-adoption.ts",
           "mustContain": "restoreRecordedLiveTerminalSurface",
           "why": "Restore host-recorded surfaces despite stale numeric bindings in other workspaces; withhold identity-unsafe numeric fallback."
+        },
+        {
+          "file": "src/renderer/src/store/terminals/sleep/terminal-pane-hibernation.ts",
+          "mustContain": "prepareHibernationSleepingSessionWrite",
+          "why": "Flush worktree-sleep records before exit guards/teardown, revalidate pane eligibility, and safely roll back on failure."
+        },
+        {
+          "file": "src/renderer/src/lib/agent-session/hibernation/agent-hibernation-pane-age.ts",
+          "mustContain": "forgetHibernationPtyBinding",
+          "why": "Skip sleeping panes and reset retained hibernation pane age on sleep or host respawn so a reused PTY id gets a fresh idle grace window."
+        },
+        {
+          "file": "src/renderer/src/lib/agent-session/hibernation/agent-hibernation-coordinator.ts",
+          "mustContain": "sleepingAgentSessionsByPaneKey: freshState.sleepingAgentSessionsByPaneKey",
+          "why": "Keep sleeping panes from being re-observed into hibernation pane age on subsequent 60s coordinator ticks."
+        },
+        {
+          "file": "src/renderer/src/components/terminal-pane/pty-transport/delivery/pty-pre-handler-buffer.ts",
+          "mustContain": "clearStalePreHandlerPtyExitsOnSpawn",
+          "why": "Clear prior-lifetime pre-handler exit tombstones on host spawn while keeping startup output and matching-incarnation exits."
+        },
+        {
+          "file": "src/renderer/src/hooks/ipc-events/workspace-catalog/worktree-event-runtime.ts",
+          "mustContain": "registerHostSpawnedTerminalRecovery",
+          "why": "Subscribe once per renderer lifetime to host pty:spawned events to clear stale exit tombstones and hibernation pane age across all spawn paths."
+        },
+        {
+          "file": "src/main/runtime/terminal/surface/workspace-session-terminal-membership-authority.ts",
+          "mustContain": "restoreRetainedTerminalTabsInGroups",
+          "why": "Keep prior retained terminal tabs, layouts, and active group aligned when rebasing a stale renderer workspace session."
+        },
+        {
+          "file": "src/main/runtime/terminal/surface/workspace-session-membership-rewrites.ts",
+          "mustContain": "activeGroupIdByWorktree",
+          "why": "Report rebased activeGroupIdByWorktree rewrites to incremental session writers."
         }
       ],
       "tests": [
@@ -447,7 +488,10 @@
         "src/renderer/src/mobile-terminal-surface-recovery/recorded-live-terminal-surface.test.ts",
         "src/renderer/src/mobile-terminal-surface-recovery/numeric-terminal-surface-recovery.test.ts",
         "src/renderer/src/mobile-terminal-surface-recovery/activation-gate-live-placement.test.ts",
-        "src/main/mobile-terminal-surface-recovery/folder-workspace-terminal-inventory.test.ts"
+        "src/main/mobile-terminal-surface-recovery/folder-workspace-terminal-inventory.test.ts",
+        "src/renderer/src/mobile-terminal-surface-recovery/hibernation-sleep-session-write.test.ts",
+        "src/renderer/src/mobile-terminal-surface-recovery/host-rebound-pre-handler-exit.test.ts",
+        "src/main/mobile-terminal-surface-recovery/rebase-retained-tab-groups.test.ts"
       ],
       "checks": [
         "pnpm exec vitest run --config config/vitest.config.ts src/main/mobile-terminal-surface-recovery src/renderer/src/mobile-terminal-surface-recovery src/renderer/src/mobile-terminal-surface-recovery/notified-workspace-activation.test.ts"

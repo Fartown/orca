@@ -20,6 +20,8 @@ import { resolveTerminalPtyOwner } from '@/lib/workspace/ownership/terminal-work
 import { resolveTerminalTeardownOwner } from './terminal-teardown-owner'
 import { settleAttentionRemovedBy } from '../../slices/workspace-attention/attention-removal-follow-up'
 import { ORCA_LAYOUT_OWNER_IS_MAIN } from '../../../../../shared/workspace-layout/layout-owner-switch'
+import { forgetHibernationPtyBinding } from '@/lib/agent-session/hibernation/agent-hibernation-pane-age'
+import { prepareHibernationSleepingSessionWrite } from '@/mobile-terminal-surface-recovery/hibernation-sleep-session-write'
 import { recordPaneSleepThroughLayoutOwner } from './terminal-sleep-layout-owner'
 
 export function createTerminalPaneHibernationActions(
@@ -106,30 +108,48 @@ export function createTerminalPaneHibernationActions(
           // Don't let one tab's capture failure block the pane hibernation.
         }
       }
+      // Flush worktree-sleep records before mutating exit guards or tearing down so remote reconnect probes see deliberate parking immediately.
+      const sleepSessionWrite = await prepareHibernationSleepingSessionWrite({
+        get,
+        worktreeId,
+        paneKey: opts.paneKey,
+        tabId: opts.tabId,
+        leafId: opts.leafId,
+        ptyId: opts.ptyId,
+        expectedRuntimePtyIds,
+        sleepingAgentSessionRecords
+      })
       // Why: store sleeping records before kill, since pty:exit can arrive first.
       const sleepingRecordKeys = Object.keys(sleepingAgentSessionRecords)
       const replacedSleepingRecords: Record<string, (typeof sleepingAgentSessionRecords)[string]> =
         {}
+      const stateBeforeCommit = get()
       for (const key of sleepingRecordKeys) {
-        const existing = state.sleepingAgentSessionsByPaneKey[key]
+        const existing = stateBeforeCommit.sleepingAgentSessionsByPaneKey[key]
         if (existing) {
           replacedSleepingRecords[key] = existing
         }
       }
-      const rollbackTargetShutdownState = (): void => {
+      const rollbackTargetShutdownState = async (): Promise<void> => {
         set((s) => {
           const next = { ...s.suppressedPtyExitIds }
           for (const ptyId of exitGuardPtyIds) {
             delete next[ptyId]
           }
+          const sleepingReplacements = sleepingRecordKeys.flatMap((key) =>
+            s.sleepingAgentSessionsByPaneKey[key] === sleepingAgentSessionRecords[key]
+              ? ([[key, replacedSleepingRecords[key] ?? null]] as const)
+              : []
+          )
           return {
             suppressedPtyExitIds: next,
             sleepingAgentSessionsByPaneKey: replaceRecordEntries(
               s.sleepingAgentSessionsByPaneKey,
-              sleepingRecordKeys.map((key) => [key, replacedSleepingRecords[key] ?? null] as const)
+              sleepingReplacements
             )
           }
         })
+        await sleepSessionWrite.rollbackMain()
       }
       set((s) => ({
         suppressedPtyExitIds: {
@@ -143,7 +163,7 @@ export function createTerminalPaneHibernationActions(
       }))
       if (expectedRuntimePtyIds.length > 0) {
         if (!runtimeEnvironmentId) {
-          rollbackTargetShutdownState()
+          await rollbackTargetShutdownState()
           throw new Error('missing_runtime_for_exact_terminal_stop')
         }
         let stopResult: {
@@ -170,18 +190,18 @@ export function createTerminalPaneHibernationActions(
             { timeoutMs: 15000 }
           )
         } catch (err) {
-          rollbackTargetShutdownState()
+          await rollbackTargetShutdownState()
           throw err
         }
         const stoppedPtyIds = sortedUniquePtyIds(stopResult.stoppedPtyIds)
         const livePtyIds = sortedUniquePtyIds(stopResult.livePtyIds)
         const targetWasLive = expectedRuntimePtyIds.every((ptyId) => livePtyIds.includes(ptyId))
         if (!equalStringSets(stoppedPtyIds, expectedRuntimePtyIds) || !targetWasLive) {
-          rollbackTargetShutdownState()
+          await rollbackTargetShutdownState()
           throw new Error('exact_terminal_stop_mismatch')
         }
         if (stopResult.postStopVerified !== true) {
-          rollbackTargetShutdownState()
+          await rollbackTargetShutdownState()
           throw new Error(stopResult.postStopFailure ?? 'exact_terminal_stop_unverified')
         }
         for (const snapshot of unregisterPtyDataHandlers(rendererShutdownPtyIds) ?? []) {
@@ -194,7 +214,7 @@ export function createTerminalPaneHibernationActions(
           await window.api.pty.kill(opts.ptyId, { keepHistory: true })
         } catch (err) {
           restorePtyDataHandlersAfterFailedShutdown(handlerSnapshots)
-          rollbackTargetShutdownState()
+          await rollbackTargetShutdownState()
           throw err
         }
         for (const snapshot of handlerSnapshots) {
@@ -262,6 +282,7 @@ export function createTerminalPaneHibernationActions(
         })
       )
       get().dropHibernatedAgentStatusPane(worktreeId, opts.paneKey)
+      forgetHibernationPtyBinding(opts.paneKey)
     }
   }
 }
